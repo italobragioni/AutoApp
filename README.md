@@ -25,10 +25,12 @@ troca de empresa pelo seletor no topo.
 
 ## Como rodar
 
+Requer um PostgreSQL local (ou um banco de desenvolvimento à parte).
+
 ```bash
 npm install
-cp .env.example .env      # ajuste AUTH_SECRET
-npm run setup             # prisma generate + db push + seed
+cp .env.example .env      # aponte DATABASE_URL para o banco local e defina AUTH_SECRET
+npm run setup             # aplica as migrations e popula os dados de demonstração
 npm run dev               # http://localhost:3000
 ```
 
@@ -38,10 +40,18 @@ Scripts disponíveis:
 | --- | --- |
 | `npm run dev` | Ambiente de desenvolvimento |
 | `npm run build` / `npm start` | Build e servidor de produção |
-| `npm run setup` | Prepara banco e popula dados de demonstração |
-| `npm run db:seed` | Repopula os dados fictícios (limpa antes) |
+| `npm run setup` | Aplica migrations e popula dados de demonstração (uso local) |
+| `npm run migrate:new` | Cria uma nova migration a partir do schema alterado |
+| `npm run migrate:deploy` | Aplica migrations pendentes (não destrutivo) |
+| `npm run migrate:status` | Mostra quais migrations já foram aplicadas |
+| `npm run db:seed` | **Apaga tudo** e repopula os dados fictícios — só em ambiente local |
 | `npm run typecheck` | Verificação de tipos |
 | `npm run smoke` | Smoke test end-to-end (requer o servidor rodando) |
+
+> **`db:seed` é destrutivo por natureza.** Ele limpa a base antes de popular, então
+> existe apenas como ferramenta de desenvolvimento. O script se recusa a rodar na
+> Vercel, com `NODE_ENV=production` ou contra um banco remoto — neste último caso
+> exige `ALLOW_REMOTE_SEED=1` explicitamente. Nenhum build ou deploy o executa.
 
 ## Stack
 
@@ -172,13 +182,45 @@ demonstração"* para receber a mesma base.
 
 ---
 
-## Migrando para PostgreSQL
+## Banco de dados e deploy
 
-O schema foi escrito sem enums nativos justamente para tornar a troca direta:
+PostgreSQL com **migrations versionadas**. O banco de produção nunca é apagado
+nem resetado por um deploy.
 
-1. Em `prisma/schema.prisma`, mude o `provider` de `sqlite` para `postgresql`.
-2. Aponte `DATABASE_URL` para o banco PostgreSQL.
-3. Rode `npx prisma migrate dev`.
+### O fluxo completo
+
+```
+1. Local     alterar prisma/schema.prisma
+2. Local     npm run migrate:new      -> gera prisma/migrations/<timestamp>_nome/
+3. Git       commitar a migration junto com o código
+4. Vercel    o build roda scripts/db-deploy.mjs
+5. Produção  aplica apenas as migrations pendentes; dados permanecem
+```
+
+O comando de build é:
+
+```
+prisma generate && node scripts/db-deploy.mjs && next build
+```
+
+`scripts/db-deploy.mjs` só cria estrutura — nunca apaga nem altera dados:
+
+- **Banco vazio** → aplica todas as migrations e cria o schema.
+- **Banco com tabelas mas sem histórico de migrations** → registra `0_init` como
+  baseline (sem executar o SQL, porque as tabelas já existem) e segue.
+- **Banco já versionado** → aplica só o que estiver pendente.
+
+O baseline existe porque a base de produção nasceu de um `prisma db push`
+anterior às migrations. Sem ele, `prisma migrate deploy` abortaria com `P3005`
+e o deploy quebraria.
+
+### Regras de segurança
+
+- Nenhum build ou deploy executa o seed.
+- Nenhum script usa `--force-reset`, `--accept-data-loss` ou `migrate reset`.
+- `prisma db push` não é usado em lugar nenhum — apenas migrations versionadas.
+- O seed tem trava própria: aborta na Vercel, aborta com `NODE_ENV=production`
+  e exige `ALLOW_REMOTE_SEED=1` para bancos remotos.
 
 Valores monetários são guardados em **centavos** (inteiros), evitando erro de
 ponto flutuante.

@@ -1,9 +1,11 @@
 /**
- * Seed do AUTOVOLT.
+ * Seed do AUTOVOLT — FERRAMENTA DE DESENVOLVIMENTO.
  *
- * Cria DUAS empresas para deixar evidente que a plataforma e multi-empresa e
- * que os dados sao isolados: o usuario demo tem acesso as duas e pode alternar
- * pelo seletor no topo da aplicacao.
+ * ATENCAO: este script APAGA TODOS OS DADOS antes de popular. Ele existe para
+ * montar um ambiente local de demonstracao, nunca para rodar em producao.
+ *
+ * Por isso ele NAO e chamado por nenhum build ou deploy, e as travas abaixo
+ * impedem execucao acidental contra um banco real. Uso previsto:
  *
  *   npm run db:seed
  */
@@ -12,6 +14,69 @@ import bcrypt from "bcryptjs";
 
 import { seedDemoDataForCompany } from "../src/lib/demo-data";
 import { slugify } from "../src/lib/slug";
+
+/**
+ * Trava de seguranca.
+ *
+ * Roda ANTES de qualquer conexao com o banco e aborta o processo se houver
+ * qualquer sinal de ambiente real. Sao tres camadas:
+ *
+ *   1. Vercel  -> recusa sempre, sem possibilidade de override. Mesmo que
+ *                 alguem religue o seed em um script de build por engano, o
+ *                 processo morre aqui antes de apagar qualquer coisa.
+ *   2. NODE_ENV=production -> mesma recusa incondicional.
+ *   3. Banco remoto -> exige a variavel ALLOW_REMOTE_SEED=1, para o caso
+ *                 legitimo de popular um banco de staging de proposito.
+ */
+function guardAgainstProduction() {
+  const url = process.env.DATABASE_URL ?? "";
+
+  if (process.env.VERCEL) {
+    console.error(
+      "\n✖ Seed bloqueado: detectado ambiente Vercel.\n" +
+        "  Este script apaga todos os dados e nunca deve rodar em deploy.\n",
+    );
+    process.exit(1);
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    console.error(
+      "\n✖ Seed bloqueado: NODE_ENV=production.\n" +
+        "  Este script apaga todos os dados e e apenas para desenvolvimento.\n",
+    );
+    process.exit(1);
+  }
+
+  if (!url) {
+    console.error("\n✖ DATABASE_URL nao definida.\n");
+    process.exit(1);
+  }
+
+  const isLocal =
+    url.startsWith("file:") ||
+    url.includes("localhost") ||
+    url.includes("127.0.0.1");
+
+  if (!isLocal && process.env.ALLOW_REMOTE_SEED !== "1") {
+    const host = url.replace(/\/\/[^@]*@/, "//***@").slice(0, 90);
+    console.error(
+      "\n✖ Seed bloqueado: DATABASE_URL aponta para um banco remoto.\n" +
+        `  Destino: ${host}...\n\n` +
+        "  Isto APAGARIA todos os dados desse banco.\n" +
+        "  Se for realmente intencional (ex.: staging), rode com:\n" +
+        "    ALLOW_REMOTE_SEED=1 npm run db:seed\n",
+    );
+    process.exit(1);
+  }
+
+  if (!isLocal) {
+    console.warn(
+      "\n⚠  ALLOW_REMOTE_SEED=1: apagando e repovoando um banco REMOTO.\n",
+    );
+  }
+}
+
+guardAgainstProduction();
 
 const db = new PrismaClient();
 
