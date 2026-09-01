@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { AlertCircle } from "lucide-react";
 
@@ -59,6 +59,22 @@ export function CustomerForm({
     undefined,
   );
 
+  // Campos controlados de proposito: o React 19 reseta o formulario depois que
+  // uma Server Action retorna. Com inputs nao controlados, um erro de validacao
+  // apagaria tudo que o usuario ja tinha digitado.
+  const [values, setValues] = useState({
+    name: customer?.name ?? "",
+    phone: customer?.phone ?? "",
+    email: customer?.email ?? "",
+    birthDate: customer?.birthDate ?? "",
+    origin: customer?.origin ?? "indicacao",
+    notes: customer?.notes ?? "",
+  });
+
+  const set = (field: keyof typeof values) => (
+    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
+  ) => setValues((current) => ({ ...current, [field]: event.target.value }));
+
   // Salvou: fecha e leva para a ficha do cliente, ja com os dados atualizados.
   useEffect(() => {
     if (!state?.ok) return;
@@ -101,7 +117,8 @@ export function CustomerForm({
             required
             autoFocus
             maxLength={120}
-            defaultValue={customer?.name ?? ""}
+            value={values.name}
+            onChange={set("name")}
             placeholder="Ex.: João Silva"
           />
         </Field>
@@ -113,7 +130,8 @@ export function CustomerForm({
               type="tel"
               inputMode="tel"
               maxLength={20}
-              defaultValue={customer?.phone ?? ""}
+              value={values.phone}
+              onChange={set("phone")}
               placeholder="(11) 98765-4321"
             />
           </Field>
@@ -122,7 +140,8 @@ export function CustomerForm({
             <Input
               name="email"
               type="email"
-              defaultValue={customer?.email ?? ""}
+              value={values.email}
+              onChange={set("email")}
               placeholder="cliente@email.com"
             />
           </Field>
@@ -130,11 +149,16 @@ export function CustomerForm({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Data de nascimento" hint="Alimenta a campanha de aniversariantes.">
-            <Input type="date" name="birthDate" defaultValue={customer?.birthDate ?? ""} />
+            <Input
+              type="date"
+              name="birthDate"
+              value={values.birthDate}
+              onChange={set("birthDate")}
+            />
           </Field>
 
           <Field label="Origem" hint="De onde este cliente veio.">
-            <Select name="origin" defaultValue={customer?.origin ?? "indicacao"}>
+            <Select name="origin" value={values.origin} onChange={set("origin")}>
               {Object.entries(ORIGIN_LABEL).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
@@ -148,7 +172,8 @@ export function CustomerForm({
           <Textarea
             name="notes"
             maxLength={2000}
-            defaultValue={customer?.notes ?? ""}
+            value={values.notes}
+            onChange={set("notes")}
             placeholder="Ex.: prefere agendar aos sábados de manhã."
           />
         </Field>

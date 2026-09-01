@@ -119,6 +119,7 @@ model Vehicle {
   plate      String?
   color      String?
   size       String   @default("medio") // pequeno | medio | grande | suv
+  mileage    Int? // quilometragem registrada no ultimo atendimento
   notes      String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt

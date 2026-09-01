@@ -36,7 +36,7 @@ await p.fill('input[name="name"]', "A");
 await p.fill('input[name="phone"]', "11");
 await p.click('#customer-form button[type="submit"]');
 await p.waitForTimeout(700);
-const erroVisivel = await p.locator('[role="alert"]').count();
+const erroVisivel = await p.locator('#customer-form [role="alert"]').count();
 check(erroVisivel > 0, "validação bloqueia dados inválidos e mostra erro");
 
 // agora válido

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Car, Plus, Search } from "lucide-react";
+import { Car, CheckCircle2, Plus, Search } from "lucide-react";
 
 import {
   Badge,
@@ -19,15 +19,19 @@ import { dateFull, money, plateMask } from "@/lib/format";
 import { VEHICLE_SIZE } from "@/lib/labels";
 import { requireContext } from "@/lib/tenant";
 
+import { VehicleForm } from "./VehicleForm";
+
 export const metadata: Metadata = { title: "Veículos" };
 
 export default async function VehiclesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; novo?: string; excluido?: string }>;
 }) {
   const { company } = await requireContext();
-  const query = ((await searchParams).q ?? "").trim();
+  const params = await searchParams;
+  const query = (params.q ?? "").trim();
+  const creating = params.novo === "1";
 
   const vehicles = await db.vehicle.findMany({
     where: {
@@ -56,6 +60,13 @@ export default async function VehiclesPage({
 
   const total = await db.vehicle.count({ where: { companyId: company.id } });
 
+  // Opcoes do seletor: somente clientes desta empresa.
+  const customers = await db.customer.findMany({
+    where: { companyId: company.id },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  });
+
   // Distribuicao por marca — ajuda a entender o perfil da carteira.
   const byBrand = new Map<string, number>();
   for (const vehicle of vehicles) {
@@ -67,6 +78,8 @@ export default async function VehiclesPage({
 
   return (
     <div className="space-y-6">
+      <VehicleForm open={creating} customers={customers} closeHref="/veiculos" />
+
       <PageHeader
         eyebrow="Operação"
         title="Veículos"
@@ -78,6 +91,16 @@ export default async function VehiclesPage({
           </ButtonLink>
         }
       />
+
+      {params.excluido === "1" && (
+        <p
+          role="status"
+          className="flex items-center gap-2 rounded-xl border border-volt-400/25 bg-volt-400/10 px-3.5 py-3 text-sm text-volt-200"
+        >
+          <CheckCircle2 size={15} className="shrink-0" />
+          Veículo excluído.
+        </p>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Veículos na base" value={total} hint="Todos os clientes" icon={<Car size={17} />} />
@@ -153,7 +176,10 @@ export default async function VehiclesPage({
                 return (
                   <Tr key={vehicle.id}>
                     <Td>
-                      <span className="flex items-center gap-3">
+                      <Link
+                        href={`/veiculos/${vehicle.id}`}
+                        className="focus-ring flex items-center gap-3 rounded"
+                      >
                         <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-ink-800 text-volt-300">
                           <Car size={16} />
                         </span>
@@ -165,7 +191,7 @@ export default async function VehiclesPage({
                             {vehicle.year ?? "—"} · {vehicle.color ?? "cor não informada"}
                           </span>
                         </span>
-                      </span>
+                      </Link>
                     </Td>
                     <Td>
                       <span className="rounded-lg border border-line bg-ink-850 px-2 py-1 font-mono text-[0.72rem] text-soft">
