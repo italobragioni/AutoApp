@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { AlertCircle, AlertTriangle, Trash2 } from "lucide-react";
 
-import { Button } from "@/components/ui";
+import { Button, Input } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import { deleteCustomerAction, type CustomerState } from "@/app/actions/customers";
 
@@ -118,11 +118,13 @@ export function DeleteCustomer({
             <span className="mb-1.5 block text-xs font-medium text-soft">
               Para confirmar, digite <strong className="text-white">{customer.name}</strong>
             </span>
-            <input
+            {/* Usa o Input compartilhado para herdar o tamanho de fonte que
+                evita o zoom automatico do iOS. */}
+            <Input
               value={typed}
               onChange={(event) => setTyped(event.target.value)}
               autoComplete="off"
-              className="w-full rounded-xl border border-ink-600 bg-ink-850 px-3.5 py-2.5 text-sm text-white placeholder:text-muted/70 transition-colors focus-ring focus-visible:border-rose-400/50"
+              className="focus-visible:border-rose-400/50"
               placeholder={customer.name}
             />
           </label>

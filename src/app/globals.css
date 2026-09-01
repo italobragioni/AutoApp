@@ -47,6 +47,21 @@
   input, select, textarea {
     color-scheme: dark;
   }
+
+  /*
+   * Rede de segurança contra o zoom automático do iOS.
+   *
+   * O Safari no iPhone amplia a tela ao focar qualquer campo com fonte menor
+   * que 16px. Os componentes em components/ui já usam `text-base sm:text-sm`
+   * para isso; esta regra cobre campos escritos à mão sem classe de tamanho.
+   */
+  @media (max-width: 639px) {
+    input:not([type="checkbox"]):not([type="radio"]),
+    select,
+    textarea {
+      font-size: 16px;
+    }
+  }
 }
 
 @layer components {

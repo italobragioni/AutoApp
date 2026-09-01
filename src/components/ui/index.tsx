@@ -152,8 +152,16 @@ export function ButtonLink({
 /* Formulario                                                                  */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Campos de formulario.
+ *
+ * `text-base sm:text-sm` nao e detalhe estetico: o Safari no iOS dá zoom
+ * automatico ao focar qualquer campo com fonte menor que 16px. Mantendo 16px
+ * (text-base) no celular o zoom nao acontece, e a partir de `sm` volta para
+ * 14px, preservando a aparencia no desktop.
+ */
 const FIELD_CLASS =
-  "w-full rounded-xl border border-ink-600 bg-ink-850 px-3.5 py-2.5 text-sm text-white placeholder:text-muted/70 transition-colors focus-ring focus-visible:border-volt-400/50";
+  "w-full rounded-xl border border-ink-600 bg-ink-850 px-3.5 py-2.5 text-base sm:text-sm text-white placeholder:text-muted/70 transition-colors focus-ring focus-visible:border-volt-400/50";
 
 export function Field({
   label,

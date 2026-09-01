@@ -34,11 +34,19 @@ export function Modal({
 }) {
   const panel = useRef<HTMLDivElement>(null);
 
+  // `onClose` costuma ser recriada a cada render do formulario que usa o modal.
+  // Guardar em ref permite que os efeitos abaixo dependam apenas de `open` —
+  // sem isso eles rodariam de novo a cada tecla digitada.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
   useEffect(() => {
     if (!open) return;
 
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") onCloseRef.current();
     }
     document.addEventListener("keydown", onKeyDown);
 
@@ -46,13 +54,26 @@ export function Modal({
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
-    panel.current?.focus();
-
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = previousOverflow;
     };
-  }, [open, onClose]);
+  }, [open]);
+
+  // Foco inicial: acontece UMA vez, na abertura.
+  //
+  // Antes este `focus()` vivia no efeito acima, que dependia de `onClose`. Como
+  // essa funcao muda a cada render, o efeito reexecutava a cada tecla e puxava
+  // o foco do campo para o dialogo — no celular isso fechava o teclado a cada
+  // letra digitada.
+  useEffect(() => {
+    if (!open) return;
+    const node = panel.current;
+    if (!node) return;
+    // Se um campo ja recebeu foco (autoFocus), respeita e nao rouba.
+    if (node.contains(document.activeElement)) return;
+    node.focus();
+  }, [open]);
 
   if (!open) return null;
 

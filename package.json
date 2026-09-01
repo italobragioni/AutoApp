@@ -16,7 +16,8 @@
     "setup": "prisma generate && prisma migrate deploy && npm run db:seed",
     "smoke": "node scripts/smoke.mjs",
     "test:clientes": "node scripts/test-clientes.mjs",
-    "test:veiculos": "node scripts/test-veiculos.mjs"
+    "test:veiculos": "node scripts/test-veiculos.mjs",
+    "test:mobile": "node scripts/test-mobile-forms.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.1.0",
