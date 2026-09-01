@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Car, Search, UserPlus, Users } from "lucide-react";
+import { Car, CheckCircle2, Search, UserPlus, Users } from "lucide-react";
 
 import {
   Avatar,
@@ -22,17 +22,22 @@ import { ORIGIN_LABEL } from "@/lib/labels";
 import { STAGE_LABEL, STAGE_TONE, getRetention } from "@/lib/retention";
 import { requireContext } from "@/lib/tenant";
 
+import { CustomerForm } from "./CustomerForm";
+
 export const metadata: Metadata = { title: "Clientes" };
 
 export default async function CustomersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; estagio?: string }>;
+  searchParams: Promise<{ q?: string; estagio?: string; novo?: string; excluido?: string }>;
 }) {
   const { company } = await requireContext();
   const params = await searchParams;
   const query = (params.q ?? "").trim();
   const stageFilter = params.estagio ?? "";
+  // O botao "Novo cliente" ja apontava para ?novo=1; agora esse parametro abre
+  // de fato o formulario, sem mudar o link nem a navegacao existente.
+  const creating = params.novo === "1";
 
   const [customers, retention, totals] = await Promise.all([
     db.customer.findMany({
@@ -82,6 +87,8 @@ export default async function CustomersPage({
 
   return (
     <div className="space-y-6">
+      <CustomerForm open={creating} closeHref="/clientes" />
+
       <PageHeader
         eyebrow="Operação"
         title="Clientes"
@@ -93,6 +100,16 @@ export default async function CustomersPage({
           </ButtonLink>
         }
       />
+
+      {params.excluido === "1" && (
+        <p
+          role="status"
+          className="flex items-center gap-2 rounded-xl border border-volt-400/25 bg-volt-400/10 px-3.5 py-3 text-sm text-volt-200"
+        >
+          <CheckCircle2 size={15} className="shrink-0" />
+          Cliente excluído.
+        </p>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Total de clientes" value={totals} hint={`${newThisMonth} novos neste mês`} icon={<Users size={17} />} />

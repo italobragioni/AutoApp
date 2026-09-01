@@ -8,6 +8,7 @@ import {
   FileText,
   Mail,
   MessageCircle,
+  Pencil,
   Phone,
   Repeat2,
   Wrench,
@@ -37,20 +38,29 @@ import {
 import { STAGE_HINT, STAGE_LABEL, STAGE_TONE, getRetention } from "@/lib/retention";
 import { requireContext } from "@/lib/tenant";
 
+import { CustomerForm } from "../CustomerForm";
+import { DeleteCustomer } from "../DeleteCustomer";
+
 export const metadata: Metadata = { title: "Ficha do cliente" };
 
 export default async function CustomerDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ editar?: string }>;
 }) {
-  const { company } = await requireContext();
+  const { company, role } = await requireContext();
   const { id } = await params;
+  const editing = (await searchParams).editar === "1";
 
   // findFirst com companyId: um id de outra empresa simplesmente nao existe aqui.
   const customer = await db.customer.findFirst({
     where: { id, companyId: company.id },
     include: {
+      _count: {
+        select: { vehicles: true, appointments: true, quotes: true, workOrders: true },
+      },
       vehicles: { orderBy: { createdAt: "asc" } },
       appointments: {
         orderBy: { startsAt: "desc" },
@@ -83,6 +93,23 @@ export default async function CustomerDetailPage({
 
   return (
     <div className="space-y-6">
+      <CustomerForm
+        open={editing}
+        closeHref={`/clientes/${customer.id}`}
+        customer={{
+          id: customer.id,
+          name: customer.name,
+          phone: customer.phone,
+          email: customer.email,
+          // O input[type=date] espera "YYYY-MM-DD".
+          birthDate: customer.birthDate
+            ? customer.birthDate.toISOString().slice(0, 10)
+            : null,
+          origin: customer.origin,
+          notes: customer.notes,
+        }}
+      />
+
       <Link
         href="/clientes"
         className="focus-ring inline-flex items-center gap-1.5 rounded text-xs font-medium text-muted transition-colors hover:text-white"
@@ -129,6 +156,22 @@ export default async function CustomerDetailPage({
               <Badge tone={STAGE_TONE[info.stage]} dot>
                 {STAGE_LABEL[info.stage]}
               </Badge>
+            )}
+            <ButtonLink href={`/clientes/${customer.id}?editar=1`} variant="secondary" size="md">
+              <Pencil size={16} />
+              Editar
+            </ButtonLink>
+            {/* Exclusao segue a estrutura de papeis ja existente: owner e manager. */}
+            {(role === "owner" || role === "manager") && (
+              <DeleteCustomer
+                customer={{ id: customer.id, name: customer.name }}
+                counts={{
+                  vehicles: customer._count.vehicles,
+                  appointments: customer._count.appointments,
+                  quotes: customer._count.quotes,
+                  workOrders: customer._count.workOrders,
+                }}
+              />
             )}
             {customer.phone && (
               <ButtonLink
