@@ -4,16 +4,17 @@
 // O acesso de um User a uma Company acontece SEMPRE via Membership, e todas as
 // queries da aplicacao sao escopadas por `companyId` (ver src/lib/tenant.ts).
 //
-// Dev usa SQLite. Para producao troque o provider para "postgresql" e ajuste
-// DATABASE_URL — o schema foi escrito sem enums nativos justamente para que a
-// migracao SQLite -> PostgreSQL seja direta.
+// Producao roda em PostgreSQL (Neon). O schema foi escrito sem enums nativos
+// justamente para que a migracao a partir de SQLite fosse direta — se quiser
+// rodar localmente contra SQLite de novo, basta trocar o provider abaixo e
+// apontar DATABASE_URL para "file:./dev.db".
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
