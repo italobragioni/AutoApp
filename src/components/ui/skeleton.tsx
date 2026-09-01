@@ -1,11 +1,23 @@
 /**
  * Esqueleto de carregamento das páginas.
  *
- * Importante: um `loading.tsx` cria um limite de Suspense e faz o Next enviar a
- * casca da página imediatamente — o que compromete o status HTTP da resposta.
- * Por isso ele NÃO é usado em segmentos que contêm rotas capazes de responder
- * 404 (como /clientes/[id], que precisa devolver 404 de verdade quando o
- * registro não pertence à empresa da sessão).
+ * Um `loading.tsx` cria um limite de Suspense no segmento, e isso tem DOIS
+ * efeitos colaterais que já causaram bugs reais neste projeto. Por isso ele não
+ * é usado em todos os segmentos:
+ *
+ * 1. Compromete o status HTTP. O Next envia a casca da página antes de a
+ *    consulta terminar, então um `notFound()` posterior responde 200 em vez de
+ *    404. Por isso segmentos com rotas dinâmicas — /clientes/[id],
+ *    /veiculos/[id] — não têm loading.tsx.
+ *
+ * 2. Quebra a navegação client-side que muda apenas os search params da rota
+ *    atual. É o padrão usado para abrir os formulários em modal
+ *    (`/servicos?novo=1`, `?editar=<id>`): com loading.tsx no segmento, o
+ *    clique no link não aplica o novo parâmetro e o modal nunca abre.
+ *    Por isso /servicos também não tem.
+ *
+ * Ou seja: ao dar camada de escrita a um módulo que usa esse padrão de modal,
+ * remova o loading.tsx do segmento.
  */
 export function PageSkeleton({ cards = 4, blocks = 1 }: { cards?: number; blocks?: number }) {
   return (

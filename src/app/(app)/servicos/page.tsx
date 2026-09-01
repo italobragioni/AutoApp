@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Clock, Plus, Repeat2, Sparkles, TrendingUp } from "lucide-react";
+import Link from "next/link";
+import { Clock, Pencil, Plus, Repeat2, Sparkles, TrendingUp } from "lucide-react";
 
 import { Badge, ButtonLink, Card, CardHeader, EmptyState } from "@/components/ui";
 import { PageHeader, StatCard } from "@/components/ui/page";
@@ -9,10 +10,21 @@ import { SERVICE_CATEGORY } from "@/lib/labels";
 import { topServices } from "@/lib/metrics";
 import { requireContext } from "@/lib/tenant";
 
+import { ServiceForm } from "./ServiceForm";
+import { ToggleServiceActive } from "./ToggleServiceActive";
+
 export const metadata: Metadata = { title: "Serviços" };
 
-export default async function ServicesPage() {
-  const { company } = await requireContext();
+export default async function ServicesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ novo?: string; editar?: string }>;
+}) {
+  const { company, role } = await requireContext();
+  const params = await searchParams;
+  // O botao "Novo servico" ja apontava para ?novo=1; agora ele abre o formulario.
+  const creating = params.novo === "1";
+  const canManage = role === "owner" || role === "manager";
 
   const [services, ranking] = await Promise.all([
     db.serviceItem.findMany({
@@ -38,8 +50,31 @@ export default async function ServicesPage() {
   const recurring = services.filter((service) => service.recurrenceDays);
   const bestSeller = ranking[0];
 
+  // Somente servicos desta empresa podem ser editados.
+  const editing = params.editar
+    ? services.find((service) => service.id === params.editar)
+    : undefined;
+
   return (
     <div className="space-y-6">
+      <ServiceForm open={creating} closeHref="/servicos" />
+      {editing && (
+        <ServiceForm
+          open
+          closeHref="/servicos"
+          service={{
+            id: editing.id,
+            name: editing.name,
+            category: editing.category,
+            description: editing.description,
+            basePrice: editing.basePrice,
+            durationMin: editing.durationMin,
+            recurrenceDays: editing.recurrenceDays,
+            active: editing.active,
+          }}
+        />
+      )}
+
       <PageHeader
         eyebrow="Operação"
         title="Serviços"
@@ -133,7 +168,22 @@ export default async function ServicesPage() {
                       )}
                     </div>
 
-                    <p className="mt-4 border-t border-line pt-3 text-[0.7rem] text-muted">
+                    {canManage && (
+                      <div className="mt-3 flex flex-wrap items-center gap-1 border-t border-line pt-3">
+                        <Link
+                          href={`/servicos?editar=${service.id}`}
+                          className="focus-ring inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[0.7rem] font-medium text-soft transition-colors hover:bg-ink-800 hover:text-white"
+                        >
+                          <Pencil size={13} />
+                          Editar
+                        </Link>
+                        <ToggleServiceActive
+                          service={{ id: service.id, active: service.active }}
+                        />
+                      </div>
+                    )}
+
+                    <p className="mt-3 border-t border-line pt-3 text-[0.7rem] text-muted">
                       {performance ? (
                         <>
                           <span className="font-medium text-soft">{performance.count}</span> vendas

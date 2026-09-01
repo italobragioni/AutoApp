@@ -17,6 +17,7 @@
     "smoke": "node scripts/smoke.mjs",
     "test:clientes": "node scripts/test-clientes.mjs",
     "test:veiculos": "node scripts/test-veiculos.mjs",
+    "test:servicos": "node scripts/test-servicos.mjs",
     "test:mobile": "node scripts/test-mobile-forms.mjs"
   },
   "dependencies": {
