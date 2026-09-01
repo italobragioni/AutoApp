@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  * {
+    @apply border-line;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-ink-950 text-soft antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "ss01";
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-display text-white;
+    letter-spacing: -0.02em;
+  }
+
+  ::selection {
+    @apply bg-volt-400/25 text-white;
+  }
+
+  /* Scrollbar discreta, alinhada ao tema escuro */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-ink-700;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-ink-600;
+  }
+
+  input, select, textarea {
+    color-scheme: dark;
+  }
+}
+
+@layer components {
+  /* Superficie padrao dos cards */
+  .surface {
+    @apply rounded-2xl border border-line bg-ink-900/80 shadow-card;
+  }
+
+  /* Fundo sutil com brilho volt — usado no topo das areas principais */
+  .glow-top {
+    background-image:
+      radial-gradient(60rem 30rem at 50% -12rem, rgba(18, 226, 155, 0.09), transparent 70%);
+  }
+
+  .grid-lines {
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+
+  .focus-ring {
+    @apply outline-none ring-offset-0 focus-visible:ring-2 focus-visible:ring-volt-400/60;
+  }
+}

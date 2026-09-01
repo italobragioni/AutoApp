@@ -1,0 +1,310 @@
+// AUTOVOLT - Schema multi-tenant
+//
+// Todo dado operacional pertence a uma Company (empresa/estetica automotiva).
+// O acesso de um User a uma Company acontece SEMPRE via Membership, e todas as
+// queries da aplicacao sao escopadas por `companyId` (ver src/lib/tenant.ts).
+//
+// Dev usa SQLite. Para producao troque o provider para "postgresql" e ajuste
+// DATABASE_URL — o schema foi escrito sem enums nativos justamente para que a
+// migracao SQLite -> PostgreSQL seja direta.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Identidade e multi-empresa
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  avatarColor  String   @default("#12E29B")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships Membership[]
+
+  @@map("users")
+}
+
+model Company {
+  id                  String   @id @default(cuid())
+  name                String
+  slug                String   @unique
+  document            String? // CNPJ
+  phone               String?
+  email               String?
+  city                String?
+  state               String?
+  address             String?
+  logoUrl             String?
+  plan                String   @default("trial") // trial | starter | pro
+  // Regras de negocio usadas pelo motor de retencao
+  retentionWindowDays Int      @default(90) // ciclo ideal de retorno do cliente
+  inactiveAfterDays   Int      @default(180) // a partir daqui o cliente e "inativo"
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  memberships  Membership[]
+  customers    Customer[]
+  vehicles     Vehicle[]
+  serviceItems ServiceItem[]
+  appointments Appointment[]
+  quotes       Quote[]
+  workOrders   WorkOrder[]
+  campaigns    Campaign[]
+
+  @@map("companies")
+}
+
+// Vinculo usuario <-> empresa. Um usuario pode operar varias empresas.
+model Membership {
+  id        String   @id @default(cuid())
+  userId    String
+  companyId String
+  role      String   @default("owner") // owner | manager | staff
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId])
+  @@index([companyId])
+  @@map("memberships")
+}
+
+// ---------------------------------------------------------------------------
+// Cadastros
+// ---------------------------------------------------------------------------
+
+model Customer {
+  id        String    @id @default(cuid())
+  companyId String
+  name      String
+  phone     String?
+  email     String?
+  document  String?
+  birthDate DateTime?
+  notes     String?
+  origin    String    @default("indicacao") // indicacao | instagram | google | passagem | outro
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  vehicles     Vehicle[]
+  appointments Appointment[]
+  quotes       Quote[]
+  workOrders   WorkOrder[]
+
+  @@index([companyId, name])
+  @@map("customers")
+}
+
+model Vehicle {
+  id         String   @id @default(cuid())
+  companyId  String
+  customerId String
+  brand      String
+  model      String
+  year       Int?
+  plate      String?
+  color      String?
+  size       String   @default("medio") // pequeno | medio | grande | suv
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer     Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
+  quotes       Quote[]
+  workOrders   WorkOrder[]
+
+  @@index([companyId])
+  @@index([customerId])
+  @@map("vehicles")
+}
+
+// Catalogo de servicos da estetica (lavagem, polimento, vitrificacao...)
+model ServiceItem {
+  id             String   @id @default(cuid())
+  companyId      String
+  name           String
+  description    String?
+  category       String   @default("lavagem") // lavagem | polimento | protecao | higienizacao | estetica | outro
+  basePrice      Int // centavos
+  durationMin    Int      @default(60)
+  // Em quantos dias esse servico costuma precisar ser refeito.
+  // E o coracao das oportunidades de retorno.
+  recurrenceDays Int?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  company        Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  appointments   AppointmentService[]
+  quoteItems     QuoteItem[]
+  workOrderItems WorkOrderItem[]
+
+  @@index([companyId])
+  @@map("service_items")
+}
+
+// ---------------------------------------------------------------------------
+// Operacao
+// ---------------------------------------------------------------------------
+
+model Appointment {
+  id         String   @id @default(cuid())
+  companyId  String
+  customerId String
+  vehicleId  String?
+  startsAt   DateTime
+  endsAt     DateTime
+  status     String   @default("agendado") // agendado | confirmado | em_andamento | concluido | cancelado | nao_compareceu
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  company   Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer  Customer             @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  vehicle   Vehicle?             @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  services  AppointmentService[]
+  workOrder WorkOrder?
+
+  @@index([companyId, startsAt])
+  @@map("appointments")
+}
+
+model AppointmentService {
+  id            String @id @default(cuid())
+  appointmentId String
+  serviceItemId String
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  serviceItem ServiceItem @relation(fields: [serviceItemId], references: [id], onDelete: Cascade)
+
+  @@unique([appointmentId, serviceItemId])
+  @@map("appointment_services")
+}
+
+model Quote {
+  id            String    @id @default(cuid())
+  companyId     String
+  number        Int
+  customerId    String
+  vehicleId     String?
+  status        String    @default("rascunho") // rascunho | enviado | aprovado | recusado | expirado
+  validUntil    DateTime?
+  discountCents Int       @default(0)
+  totalCents    Int       @default(0)
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  company    Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer   Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  vehicle    Vehicle?    @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  items      QuoteItem[]
+  workOrders WorkOrder[]
+
+  @@unique([companyId, number])
+  @@index([companyId, status])
+  @@map("quotes")
+}
+
+model QuoteItem {
+  id             String  @id @default(cuid())
+  quoteId        String
+  serviceItemId  String?
+  description    String
+  quantity       Int     @default(1)
+  unitPriceCents Int
+
+  quote       Quote        @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  serviceItem ServiceItem? @relation(fields: [serviceItemId], references: [id], onDelete: SetNull)
+
+  @@index([quoteId])
+  @@map("quote_items")
+}
+
+model WorkOrder {
+  id            String    @id @default(cuid())
+  companyId     String
+  number        Int
+  customerId    String
+  vehicleId     String?
+  quoteId       String?
+  appointmentId String?   @unique
+  status        String    @default("aberta") // aberta | em_andamento | aguardando_retirada | concluida | cancelada
+  paymentMethod String? // pix | dinheiro | credito | debito | link
+  totalCents    Int       @default(0)
+  notes         String?
+  openedAt      DateTime  @default(now())
+  finishedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  company     Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer    Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  vehicle     Vehicle?        @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  quote       Quote?          @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  appointment Appointment?    @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  items       WorkOrderItem[]
+
+  @@unique([companyId, number])
+  @@index([companyId, status])
+  @@index([companyId, finishedAt])
+  @@map("work_orders")
+}
+
+model WorkOrderItem {
+  id             String  @id @default(cuid())
+  workOrderId    String
+  serviceItemId  String?
+  description    String
+  quantity       Int     @default(1)
+  unitPriceCents Int
+
+  workOrder   WorkOrder    @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  serviceItem ServiceItem? @relation(fields: [serviceItemId], references: [id], onDelete: SetNull)
+
+  @@index([workOrderId])
+  @@map("work_order_items")
+}
+
+// ---------------------------------------------------------------------------
+// Crescimento
+// ---------------------------------------------------------------------------
+
+model Campaign {
+  id             String    @id @default(cuid())
+  companyId      String
+  name           String
+  channel        String    @default("whatsapp") // whatsapp | sms | email | instagram
+  // Publico-alvo calculado pelo motor de retencao (src/lib/retention.ts)
+  audience       String    @default("em_risco") // todos | em_risco | inativos | aniversariantes | sem_retorno | vip
+  status         String    @default("rascunho") // rascunho | agendada | enviada | pausada
+  message        String
+  scheduledAt    DateTime?
+  sentAt         DateTime?
+  sentCount      Int       @default(0)
+  answeredCount  Int       @default(0)
+  convertedCount Int       @default(0)
+  revenueCents   Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, status])
+  @@map("campaigns")
+}
