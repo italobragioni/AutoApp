@@ -36,6 +36,7 @@ import {
   statusOf,
 } from "@/lib/labels";
 import { STAGE_HINT, STAGE_LABEL, STAGE_TONE, getRetention } from "@/lib/retention";
+import { can } from "@/lib/permissions";
 import { requireContext } from "@/lib/tenant";
 
 import { CustomerForm } from "../CustomerForm";
@@ -162,7 +163,7 @@ export default async function CustomerDetailPage({
               Editar
             </ButtonLink>
             {/* Exclusao segue a estrutura de papeis ja existente: owner e manager. */}
-            {(role === "owner" || role === "manager") && (
+            {can(role, "customers.delete") && (
               <DeleteCustomer
                 customer={{ id: customer.id, name: customer.name }}
                 counts={{

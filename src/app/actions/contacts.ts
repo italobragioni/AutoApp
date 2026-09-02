@@ -3,9 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { permit } from "@/lib/authorize";
 import { db } from "@/lib/db";
 import { CONTACT_CHANNELS, CONTACT_OUTCOMES } from "@/lib/contacts";
-import { requireContext } from "@/lib/tenant";
 
 /**
  * Registro de contato de retencao.
@@ -43,7 +43,9 @@ export async function registerContactAction(
   _state: ContactState,
   formData: FormData,
 ): Promise<ContactState> {
-  const { company, user } = await requireContext();
+  const gate = await permit("retention.contact");
+  if (!gate.ok) return { error: gate.error };
+  const { company, user } = gate;
 
   const parsed = contactSchema.safeParse({
     customerId: String(formData.get("customerId") ?? "").trim(),

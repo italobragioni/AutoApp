@@ -3,9 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { permit } from "@/lib/authorize";
 import { db } from "@/lib/db";
 import { parseMoneyToCents } from "@/lib/format";
-import { requireContext } from "@/lib/tenant";
 
 /**
  * Escrita do modulo Servicos (catalogo).
@@ -98,19 +98,13 @@ function revalidateService() {
   revalidatePath("/relatorios");
 }
 
-/** Preco e duracao definem quanto a empresa cobra — decisao de gestao. */
-function canManage(role: string) {
-  return role === "owner" || role === "manager";
-}
-
 export async function createServiceAction(
   _state: ServiceState,
   formData: FormData,
 ): Promise<ServiceState> {
-  const { company, role } = await requireContext();
-  if (!canManage(role)) {
-    return { error: "Apenas proprietário ou gerente podem alterar o catálogo." };
-  }
+  const gate = await permit("services.write");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
 
   const parsed = serviceSchema.safeParse(readForm(formData));
   if (!parsed.success) {
@@ -131,10 +125,9 @@ export async function updateServiceAction(
   _state: ServiceState,
   formData: FormData,
 ): Promise<ServiceState> {
-  const { company, role } = await requireContext();
-  if (!canManage(role)) {
-    return { error: "Apenas proprietário ou gerente podem alterar o catálogo." };
-  }
+  const gate = await permit("services.write");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
 
   const id = String(formData.get("id") ?? "");
   if (!id) return { error: "Serviço não identificado." };
@@ -168,10 +161,9 @@ export async function toggleServiceActiveAction(
   _state: ServiceState,
   formData: FormData,
 ): Promise<ServiceState> {
-  const { company, role } = await requireContext();
-  if (!canManage(role)) {
-    return { error: "Apenas proprietário ou gerente podem alterar o catálogo." };
-  }
+  const gate = await permit("services.write");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
 
   const id = String(formData.get("id") ?? "");
   if (!id) return { error: "Serviço não identificado." };

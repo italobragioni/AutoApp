@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { permit } from "@/lib/authorize";
 import { db } from "@/lib/db";
-import { requireContext } from "@/lib/tenant";
 
 /**
  * Escrita do modulo Clientes.
@@ -87,7 +87,9 @@ export async function createCustomerAction(
   _state: CustomerState,
   formData: FormData,
 ): Promise<CustomerState> {
-  const { company } = await requireContext();
+  const gate = await permit("customers.write");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
 
   const parsed = customerSchema.safeParse(readForm(formData));
   if (!parsed.success) {
@@ -108,7 +110,9 @@ export async function updateCustomerAction(
   _state: CustomerState,
   formData: FormData,
 ): Promise<CustomerState> {
-  const { company } = await requireContext();
+  const gate = await permit("customers.write");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
   const id = String(formData.get("id") ?? "");
 
   if (!id) return { error: "Cliente não identificado." };
@@ -135,8 +139,8 @@ export async function updateCustomerAction(
 }
 
 /**
- * Exclusao. Restrita a owner/manager pela estrutura de Membership que ja existe
- * — o papel vem de requireContext, o mesmo criterio usado em Configuracoes.
+ * Exclusao. A permissao "customers.delete" e conferida no servidor por `permit`
+ * (src/lib/authorize.ts), que le o papel do Membership — nunca do formulario.
  *
  * O `onDelete: Cascade` do schema leva junto veiculos, agendamentos, orcamentos
  * e ordens de servico do cliente. Por isso a interface avisa o que sera perdido
@@ -146,11 +150,9 @@ export async function deleteCustomerAction(
   _state: CustomerState,
   formData: FormData,
 ): Promise<CustomerState> {
-  const { company, role } = await requireContext();
-
-  if (role !== "owner" && role !== "manager") {
-    return { error: "Apenas proprietário ou gerente podem excluir clientes." };
-  }
+  const gate = await permit("customers.delete");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
 
   const id = String(formData.get("id") ?? "");
   if (!id) return { error: "Cliente não identificado." };

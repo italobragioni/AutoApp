@@ -18,7 +18,7 @@ import { db } from "@/lib/db";
 import { dateFull, daysBetween, money, plateMask } from "@/lib/format";
 import { QUOTE_STATUS, statusOf } from "@/lib/labels";
 import { isExpired, isQuoteEditable, quoteSubtotalCents, quoteTotalCents } from "@/lib/quotes";
-import { requireContext } from "@/lib/tenant";
+import { requirePermission } from "@/lib/authorize";
 
 import {
   ConvertQuote,
@@ -37,7 +37,8 @@ export default async function QuoteDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ editar?: string }>;
 }) {
-  const { company } = await requireContext();
+  // Sem esta permissao a pagina nem carrega — a trava e do servidor.
+  const { company } = await requirePermission("quotes.write");
   const { id } = await params;
   const editing = (await searchParams).editar === "1";
 

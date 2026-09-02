@@ -16,7 +16,7 @@ import {
   audienceFor,
   getRetention,
 } from "@/lib/retention";
-import { requireContext } from "@/lib/tenant";
+import { requirePermission } from "@/lib/authorize";
 
 import { CampaignForm } from "./CampaignForm";
 
@@ -27,7 +27,8 @@ export default async function CampaignsPage({
 }: {
   searchParams: Promise<{ nova?: string }>;
 }) {
-  const { company } = await requireContext();
+  // Sem esta permissao a pagina nem carrega — a trava e do servidor.
+  const { company } = await requirePermission("campaigns.write");
   const creating = (await searchParams).nova === "1";
 
   const [campaigns, retention] = await Promise.all([

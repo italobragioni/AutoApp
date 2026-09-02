@@ -1,6 +1,8 @@
 import { MobileNav } from "@/components/nav/MobileNav";
 import { Sidebar } from "@/components/nav/Sidebar";
 import { Topbar } from "@/components/nav/Topbar";
+import { allowedHrefs } from "@/lib/navigation";
+import { can } from "@/lib/permissions";
 import { getRetention } from "@/lib/retention";
 import { requireContext } from "@/lib/tenant";
 
@@ -12,9 +14,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const context = await requireContext();
   const retention = await getRetention(context.company.id);
 
+  // O menu mostra só o que o papel alcança. Esconder aqui é conforto: cada
+  // página exige a mesma permissão no servidor.
+  const allowed = allowedHrefs((permission) => can(context.role, permission));
+
   return (
     <div className="min-h-dvh">
-      <Sidebar retentionBadge={retention.needsContactCount || undefined} />
+      <Sidebar retentionBadge={retention.needsContactCount || undefined} allowed={allowed} />
 
       <div className="lg:pl-64">
         <Topbar context={context} />
@@ -23,7 +29,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </main>
       </div>
 
-      <MobileNav />
+      <MobileNav allowed={allowed} />
     </div>
   );
 }

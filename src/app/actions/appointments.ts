@@ -3,11 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { permit } from "@/lib/authorize";
 import { db } from "@/lib/db";
 import { BLOCKING_STATUSES } from "@/lib/agenda";
 import { parseMoneyToCents } from "@/lib/format";
 import { APPOINTMENT_STATUS } from "@/lib/labels";
-import { requireContext } from "@/lib/tenant";
 
 /**
  * Escrita do modulo Agenda.
@@ -159,7 +159,9 @@ export async function createAppointmentAction(
   _state: AppointmentState,
   formData: FormData,
 ): Promise<AppointmentState> {
-  const { company } = await requireContext();
+  const gate = await permit("appointments.write");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
 
   const parsed = appointmentSchema.safeParse(readForm(formData));
   if (!parsed.success) {
@@ -206,7 +208,9 @@ export async function updateAppointmentAction(
   _state: AppointmentState,
   formData: FormData,
 ): Promise<AppointmentState> {
-  const { company } = await requireContext();
+  const gate = await permit("appointments.write");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
   const id = String(formData.get("id") ?? "");
   if (!id) return { error: "Agendamento não identificado." };
 
@@ -270,7 +274,9 @@ export async function changeAppointmentStatusAction(
   _state: AppointmentState,
   formData: FormData,
 ): Promise<AppointmentState> {
-  const { company } = await requireContext();
+  const gate = await permit("appointments.write");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
 
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "");

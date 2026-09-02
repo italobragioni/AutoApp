@@ -14,6 +14,7 @@ import { LineChart } from "@/components/charts";
 import { Badge, Card, CardBody, CardHeader, ButtonLink, EmptyState } from "@/components/ui";
 import { OpportunityBanner, PageHeader, StatCard } from "@/components/ui/page";
 import { attachContacts } from "@/lib/contacts";
+import { can } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import { dateFull, money, moneyCompact, phoneMask, samePeriodHint, time, whatsappLink } from "@/lib/format";
 import { APPOINTMENT_STATUS, WORK_ORDER_STATUS, statusOf } from "@/lib/labels";
@@ -24,8 +25,13 @@ import { requireContext } from "@/lib/tenant";
 export const metadata: Metadata = { title: "Dashboard" };
 
 export default async function DashboardPage() {
-  const { company, user } = await requireContext();
+  const { company, user, role } = await requireContext();
   const companyId = company.id;
+
+  // Faturamento, ticket medio e o grafico de receita so aparecem para quem tem
+  // reports.finance. A operacao do dia (agenda, OS, retencao) continua visivel
+  // para todo mundo.
+  const showsFinance = can(role, "reports.finance");
 
   const [metrics, revenue, retention, todayAgenda, activeOrders] = await Promise.all([
     getDashboardMetrics(companyId),
@@ -123,6 +129,7 @@ export default async function DashboardPage() {
 
       {/* Indicadores principais */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {showsFinance && (
         <StatCard
           label="Faturamento do mês"
           value={money(metrics.revenueMonthCents)}
@@ -135,12 +142,15 @@ export default async function DashboardPage() {
           icon={<CircleDollarSign size={17} />}
           tone="volt"
         />
+        )}
+        {showsFinance && (
         <StatCard
           label="Ticket médio"
           value={money(metrics.averageTicketCents)}
           hint={`${metrics.ordersMonth} ${metrics.ordersMonth === 1 ? "serviço" : "serviços"} no mês`}
           icon={<Wrench size={17} />}
         />
+        )}
         <StatCard
           label="Agendamentos hoje"
           value={metrics.appointmentsToday}
@@ -158,6 +168,7 @@ export default async function DashboardPage() {
 
       <div className="grid gap-5 xl:grid-cols-3">
         {/* Faturamento */}
+        {showsFinance && (
         <Card className="xl:col-span-2">
           <CardHeader
             title="Faturamento dos últimos 6 meses"
@@ -179,6 +190,7 @@ export default async function DashboardPage() {
             <LineChart data={revenue} format={(value) => moneyCompact(value)} />
           </CardBody>
         </Card>
+        )}
 
         {/* Retencao resumida */}
         <Card>

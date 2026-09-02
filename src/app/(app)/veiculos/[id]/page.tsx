@@ -25,6 +25,7 @@ import {
   WORK_ORDER_STATUS,
   statusOf,
 } from "@/lib/labels";
+import { can } from "@/lib/permissions";
 import { requireContext } from "@/lib/tenant";
 
 import { DeleteVehicle } from "../DeleteVehicle";
@@ -144,7 +145,7 @@ export default async function VehicleDetailPage({
               Editar
             </ButtonLink>
             {/* Mesmo criterio de papel ja usado em Clientes e Configuracoes. */}
-            {(role === "owner" || role === "manager") && (
+            {can(role, "vehicles.delete") && (
               <DeleteVehicle
                 vehicle={{ id: vehicle.id, label }}
                 counts={{

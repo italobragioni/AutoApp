@@ -4,10 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { permit } from "@/lib/authorize";
 import { db } from "@/lib/db";
 import { parseMoneyToCents } from "@/lib/format";
 import { QUOTE_STATUS } from "@/lib/labels";
-import { requireContext } from "@/lib/tenant";
 
 /**
  * Escrita do modulo Orcamentos.
@@ -137,7 +137,9 @@ export async function createQuoteAction(
   _state: QuoteState,
   formData: FormData,
 ): Promise<QuoteState> {
-  const { company } = await requireContext();
+  const gate = await permit("quotes.write");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
 
   const parsed = quoteSchema.safeParse(readForm(formData));
   if (!parsed.success) {
@@ -182,7 +184,9 @@ export async function updateQuoteAction(
   _state: QuoteState,
   formData: FormData,
 ): Promise<QuoteState> {
-  const { company } = await requireContext();
+  const gate = await permit("quotes.write");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
   const id = String(formData.get("id") ?? "");
   if (!id) return { error: "Orçamento não identificado." };
 
@@ -251,7 +255,9 @@ export async function changeQuoteStatusAction(
   _state: QuoteState,
   formData: FormData,
 ): Promise<QuoteState> {
-  const { company } = await requireContext();
+  const gate = await permit("quotes.decide");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
 
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "");
@@ -282,7 +288,9 @@ export async function renewQuoteAction(
   _state: QuoteState,
   formData: FormData,
 ): Promise<QuoteState> {
-  const { company } = await requireContext();
+  const gate = await permit("quotes.write");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
 
   const id = String(formData.get("id") ?? "");
   const validUntil = String(formData.get("validUntil") ?? "").trim();
@@ -316,10 +324,9 @@ export async function deleteQuoteAction(
   _state: QuoteState,
   formData: FormData,
 ): Promise<QuoteState> {
-  const { company, role } = await requireContext();
-  if (role !== "owner" && role !== "manager") {
-    return { error: "Apenas proprietário ou gerente podem excluir orçamentos." };
-  }
+  const gate = await permit("quotes.write");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
 
   const id = String(formData.get("id") ?? "");
   if (!id) return { error: "Orçamento não identificado." };
@@ -359,7 +366,9 @@ export async function convertQuoteToWorkOrderAction(
   _state: QuoteState,
   formData: FormData,
 ): Promise<QuoteState> {
-  const { company } = await requireContext();
+  const gate = await permit("quotes.decide");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
 
   const id = String(formData.get("id") ?? "");
   if (!id) return { error: "Orçamento não identificado." };

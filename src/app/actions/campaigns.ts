@@ -9,10 +9,10 @@ import {
   syncCampaignTotals,
   type ParticipantStatus,
 } from "@/lib/campaigns";
+import { permit } from "@/lib/authorize";
 import { db } from "@/lib/db";
 import { CAMPAIGN_STATUS, CHANNEL_LABEL } from "@/lib/labels";
 import { AUDIENCE_LABEL, audienceFor, getRetention } from "@/lib/retention";
-import { requireContext } from "@/lib/tenant";
 
 /**
  * Escrita do modulo Campanhas.
@@ -75,7 +75,9 @@ export async function createCampaignAction(
   _state: CampaignState,
   formData: FormData,
 ): Promise<CampaignState> {
-  const { company } = await requireContext();
+  const gate = await permit("campaigns.write");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
 
   const parsed = campaignSchema.safeParse(readForm(formData));
   if (!parsed.success) {
@@ -135,7 +137,9 @@ export async function updateCampaignAction(
   _state: CampaignState,
   formData: FormData,
 ): Promise<CampaignState> {
-  const { company } = await requireContext();
+  const gate = await permit("campaigns.write");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
 
   const id = String(formData.get("id") ?? "");
   const existing = await db.campaign.findFirst({
@@ -174,7 +178,9 @@ export async function changeCampaignStatusAction(
   _state: CampaignState,
   formData: FormData,
 ): Promise<CampaignState> {
-  const { company } = await requireContext();
+  const gate = await permit("campaigns.write");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
 
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "");
@@ -196,7 +202,9 @@ export async function deleteCampaignAction(
   _state: CampaignState,
   formData: FormData,
 ): Promise<CampaignState> {
-  const { company } = await requireContext();
+  const gate = await permit("campaigns.write");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
 
   const id = String(formData.get("id") ?? "");
   const existing = await db.campaign.findFirst({
@@ -223,7 +231,9 @@ export async function sendCampaignAction(
   _state: CampaignState,
   formData: FormData,
 ): Promise<CampaignState> {
-  const { company } = await requireContext();
+  const gate = await permit("campaigns.write");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
 
   const id = String(formData.get("id") ?? "");
   const campaign = await db.campaign.findFirst({
@@ -267,7 +277,9 @@ export async function setParticipantStatusAction(
   _state: CampaignState,
   formData: FormData,
 ): Promise<CampaignState> {
-  const { company } = await requireContext();
+  const gate = await permit("campaigns.write");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
 
   const participantId = String(formData.get("participantId") ?? "");
   const status = String(formData.get("status") ?? "");
@@ -319,7 +331,9 @@ export async function removeParticipantAction(
   _state: CampaignState,
   formData: FormData,
 ): Promise<CampaignState> {
-  const { company } = await requireContext();
+  const gate = await permit("campaigns.write");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
 
   const participantId = String(formData.get("participantId") ?? "");
   const participant = await db.campaignParticipant.findFirst({

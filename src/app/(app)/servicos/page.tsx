@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { money } from "@/lib/format";
 import { SERVICE_CATEGORY } from "@/lib/labels";
 import { topServices } from "@/lib/metrics";
+import { can } from "@/lib/permissions";
 import { requireContext } from "@/lib/tenant";
 
 import { ServiceForm } from "./ServiceForm";
@@ -24,7 +25,7 @@ export default async function ServicesPage({
   const params = await searchParams;
   // O botao "Novo servico" ja apontava para ?novo=1; agora ele abre o formulario.
   const creating = params.novo === "1";
-  const canManage = role === "owner" || role === "manager";
+  const canManage = can(role, "services.write");
 
   const [services, ranking] = await Promise.all([
     db.serviceItem.findMany({
@@ -57,8 +58,8 @@ export default async function ServicesPage({
 
   return (
     <div className="space-y-6">
-      <ServiceForm open={creating} closeHref="/servicos" />
-      {editing && (
+      <ServiceForm open={creating && canManage} closeHref="/servicos" />
+      {editing && canManage && (
         <ServiceForm
           open
           closeHref="/servicos"
@@ -80,10 +81,12 @@ export default async function ServicesPage({
         title="Serviços"
         description="Seu catálogo: preço, duração e — o mais importante — de quanto em quanto tempo cada serviço precisa ser refeito."
         actions={
-          <ButtonLink href="/servicos?novo=1" size="md">
-            <Plus size={16} />
-            Novo serviço
-          </ButtonLink>
+          canManage ? (
+            <ButtonLink href="/servicos?novo=1" size="md">
+              <Plus size={16} />
+              Novo serviço
+            </ButtonLink>
+          ) : undefined
         }
       />
 

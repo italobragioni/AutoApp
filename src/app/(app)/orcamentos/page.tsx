@@ -17,7 +17,7 @@ import { PageHeader, StatCard } from "@/components/ui/page";
 import { db } from "@/lib/db";
 import { daysBetween, dateFull, money } from "@/lib/format";
 import { QUOTE_STATUS, statusOf } from "@/lib/labels";
-import { requireContext } from "@/lib/tenant";
+import { requirePermission } from "@/lib/authorize";
 
 import { QuoteForm } from "./QuoteForm";
 
@@ -30,7 +30,8 @@ export default async function QuotesPage({
 }: {
   searchParams: Promise<{ status?: string; novo?: string; excluido?: string }>;
 }) {
-  const { company } = await requireContext();
+  // Sem esta permissao a pagina nem carrega — a trava e do servidor.
+  const { company } = await requirePermission("quotes.write");
   const params = await searchParams;
   const statusFilter = params.status ?? "";
   const creating = params.novo === "1";

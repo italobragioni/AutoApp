@@ -151,7 +151,9 @@ async function main() {
     },
   });
 
-  // Um segundo usuario, apenas da empresa principal — demonstra multiusuario.
+  // Equipe da empresa principal, com os tres papeis representados. Serve para
+  // ver na pratica o que cada um alcanca — entrando com cada e-mail abaixo, a
+  // mesma plataforma mostra menus e acoes diferentes.
   await db.user.create({
     data: {
       name: "Tainá Ribeiro",
@@ -159,6 +161,16 @@ async function main() {
       passwordHash,
       avatarColor: "#38BDF8",
       memberships: { create: [{ companyId: primary.id, role: "manager" }] },
+    },
+  });
+
+  await db.user.create({
+    data: {
+      name: "Diego Nakamura",
+      email: "diego.nakamura@garage77.com.br",
+      passwordHash,
+      avatarColor: "#FBBF24",
+      memberships: { create: [{ companyId: primary.id, role: "staff" }] },
     },
   });
 
@@ -179,7 +191,10 @@ async function main() {
   console.log("\n✔ Seed concluído.");
   console.table(counts);
   console.log(`\nAcesso de demonstração:\n  e-mail: ${DEMO_EMAIL}\n  senha:  ${DEMO_PASSWORD}\n`);
-  console.log(`Usuário: ${owner.name} — com acesso a 2 empresas.\n`);
+  console.log(`Usuário: ${owner.name} — com acesso a 2 empresas.`);
+  console.log("\nEquipe da Garage 77 (mesma senha), para ver os papéis:");
+  console.log("  taina.ribeiro@garage77.com.br   — Gerente");
+  console.log("  diego.nakamura@garage77.com.br  — Operacional\n");
 }
 
 main()

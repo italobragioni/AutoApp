@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { permit } from "@/lib/authorize";
 import { db } from "@/lib/db";
-import { requireContext } from "@/lib/tenant";
 
 /**
  * Escrita do modulo Veiculos.
@@ -110,7 +110,9 @@ export async function createVehicleAction(
   _state: VehicleState,
   formData: FormData,
 ): Promise<VehicleState> {
-  const { company } = await requireContext();
+  const gate = await permit("vehicles.write");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
 
   const parsed = vehicleSchema.safeParse(readForm(formData));
   if (!parsed.success) {
@@ -137,7 +139,9 @@ export async function updateVehicleAction(
   _state: VehicleState,
   formData: FormData,
 ): Promise<VehicleState> {
-  const { company } = await requireContext();
+  const gate = await permit("vehicles.write");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
   const id = String(formData.get("id") ?? "");
   if (!id) return { error: "Veículo não identificado." };
 
@@ -183,11 +187,9 @@ export async function deleteVehicleAction(
   _state: VehicleState,
   formData: FormData,
 ): Promise<VehicleState> {
-  const { company, role } = await requireContext();
-
-  if (role !== "owner" && role !== "manager") {
-    return { error: "Apenas proprietário ou gerente podem excluir veículos." };
-  }
+  const gate = await permit("vehicles.delete");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
 
   const id = String(formData.get("id") ?? "");
   if (!id) return { error: "Veículo não identificado." };

@@ -4,12 +4,12 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { permit } from "@/lib/authorize";
 import { db } from "@/lib/db";
 import { appointmentValueCents } from "@/lib/agenda";
 import { attributeWorkOrder, detachWorkOrder } from "@/lib/campaigns";
 import { parseMoneyToCents } from "@/lib/format";
 import { PAYMENT_LABEL, WORK_ORDER_STATUS } from "@/lib/labels";
-import { requireContext } from "@/lib/tenant";
 
 /**
  * Escrita do modulo Ordens de Servico.
@@ -146,7 +146,9 @@ export async function createWorkOrderAction(
   _state: WorkOrderState,
   formData: FormData,
 ): Promise<WorkOrderState> {
-  const { company } = await requireContext();
+  const gate = await permit("workorders.write");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
 
   const parsed = workOrderSchema.safeParse(readForm(formData));
   if (!parsed.success) {
@@ -195,7 +197,9 @@ export async function createWorkOrderFromAppointmentAction(
   _state: WorkOrderState,
   formData: FormData,
 ): Promise<WorkOrderState> {
-  const { company } = await requireContext();
+  const gate = await permit("workorders.write");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
 
   const appointmentId = String(formData.get("appointmentId") ?? "");
   if (!appointmentId) return { error: "Agendamento não identificado." };
@@ -262,7 +266,9 @@ export async function updateWorkOrderAction(
   _state: WorkOrderState,
   formData: FormData,
 ): Promise<WorkOrderState> {
-  const { company } = await requireContext();
+  const gate = await permit("workorders.write");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
   const id = String(formData.get("id") ?? "");
   if (!id) return { error: "Ordem de serviço não identificada." };
 
@@ -312,7 +318,9 @@ export async function changeWorkOrderStatusAction(
   _state: WorkOrderState,
   formData: FormData,
 ): Promise<WorkOrderState> {
-  const { company } = await requireContext();
+  const gate = await permit("workorders.write");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
 
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "");
@@ -357,7 +365,9 @@ export async function completeWorkOrderAction(
   _state: WorkOrderState,
   formData: FormData,
 ): Promise<WorkOrderState> {
-  const { company } = await requireContext();
+  const gate = await permit("workorders.finish");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
 
   const id = String(formData.get("id") ?? "");
   if (!id) return { error: "Ordem de serviço não identificada." };

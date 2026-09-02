@@ -15,14 +15,15 @@ import {
   topServices,
 } from "@/lib/metrics";
 import { getRetention } from "@/lib/retention";
-import { requireContext } from "@/lib/tenant";
+import { requirePermission } from "@/lib/authorize";
 
 export const metadata: Metadata = { title: "Relatórios" };
 
 const ORIGIN_COLORS = ["#12E29B", "#38BDF8", "#FBBF24", "#FB7185", "#A78BFA", "#33445A"];
 
 export default async function ReportsPage() {
-  const { company } = await requireContext();
+  // Sem esta permissao a pagina nem carrega — a trava e do servidor.
+  const { company } = await requirePermission("reports.finance");
   const companyId = company.id;
 
   const [metrics, revenue12, services, origins, retention, payments, customers] = await Promise.all([

@@ -39,7 +39,7 @@ import {
   getRetention,
   type RetentionStage,
 } from "@/lib/retention";
-import { requireContext } from "@/lib/tenant";
+import { requirePermission } from "@/lib/authorize";
 
 import { CampaignForm } from "../CampaignForm";
 import {
@@ -59,7 +59,8 @@ export default async function CampaignDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ editar?: string }>;
 }) {
-  const { company } = await requireContext();
+  // Sem esta permissao a pagina nem carrega — a trava e do servidor.
+  const { company } = await requirePermission("campaigns.write");
   const { id } = await params;
   const editing = (await searchParams).editar === "1";
 

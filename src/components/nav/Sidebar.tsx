@@ -9,9 +9,12 @@ import { cn } from "@/lib/format";
 
 export function Sidebar({
   retentionBadge,
+  allowed,
 }: {
   /** Nº de clientes precisando de contato — o produto sinaliza a oportunidade. */
   retentionBadge?: number;
+  /** Hrefs que o papel atual pode ver. Resolvido no servidor. */
+  allowed: string[];
 }) {
   const pathname = usePathname();
 
@@ -30,7 +33,7 @@ export function Sidebar({
               {group.label}
             </p>
             <ul className="space-y-0.5">
-              {itemsOfGroup(group.key).map((item) => {
+              {itemsOfGroup(group.key, allowed).map((item) => {
                 const active =
                   pathname === item.href || pathname.startsWith(`${item.href}/`);
                 const Icon = item.icon;

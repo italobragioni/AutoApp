@@ -12,10 +12,10 @@ import { cn } from "@/lib/format";
  * Mobile: barra inferior com os 4 destinos mais usados + "Mais",
  * que abre a lista completa em uma folha deslizante.
  */
-export function MobileNav() {
+export function MobileNav({ allowed }: { allowed: string[] }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const primary = NAV_ITEMS.filter((item) => item.mobile);
+  const primary = NAV_ITEMS.filter((item) => item.mobile && allowed.includes(item.href));
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
@@ -50,7 +50,7 @@ export function MobileNav() {
                     {group.label}
                   </p>
                   <div className="grid grid-cols-2 gap-2">
-                    {itemsOfGroup(group.key).map((item) => {
+                    {itemsOfGroup(group.key, allowed).map((item) => {
                       const Icon = item.icon;
                       return (
                         <Link

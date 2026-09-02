@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { permit } from "@/lib/authorize";
 import { db } from "@/lib/db";
-import { requireContext } from "@/lib/tenant";
 
 export type SettingsState = { ok?: boolean; error?: string } | undefined;
 
@@ -22,10 +22,9 @@ export async function updateCompanyAction(
   _state: SettingsState,
   formData: FormData,
 ): Promise<SettingsState> {
-  const { company, role } = await requireContext();
-  if (role !== "owner" && role !== "manager") {
-    return { error: "Você não tem permissão para alterar os dados da empresa." };
-  }
+  const gate = await permit("company.settings");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
 
   const parsed = companySchema.safeParse({
     name: String(formData.get("name") ?? "").trim(),
@@ -89,10 +88,9 @@ export async function updateRetentionAction(
   _state: SettingsState,
   formData: FormData,
 ): Promise<SettingsState> {
-  const { company, role } = await requireContext();
-  if (role !== "owner" && role !== "manager") {
-    return { error: "Você não tem permissão para alterar as regras de retenção." };
-  }
+  const gate = await permit("company.settings");
+  if (!gate.ok) return { error: gate.error };
+  const { company } = gate;
 
   const parsed = retentionSchema.safeParse({
     retentionWindowDays: Number(formData.get("retentionWindowDays")),

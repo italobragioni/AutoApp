@@ -31,8 +31,10 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  memberships Membership[]
-  contactLogs ContactLog[]
+  memberships     Membership[]
+  contactLogs     ContactLog[]
+  invitesSent     Invitation[] @relation("InvitationCreatedBy")
+  invitesAccepted Invitation[] @relation("InvitationAcceptedBy")
 
   @@map("users")
 }
@@ -71,6 +73,7 @@ model Company {
   campaigns            Campaign[]
   contactLogs          ContactLog[]
   campaignParticipants CampaignParticipant[]
+  invitations          Invitation[]
 
   @@map("companies")
 }
@@ -89,6 +92,40 @@ model Membership {
   @@unique([userId, companyId])
   @@index([companyId])
   @@map("memberships")
+}
+
+// Convite para alguem entrar em uma empresa.
+//
+// Nao substitui o Membership: e o passo anterior a ele. Quando o convite e
+// aceito, o Membership da empresa e criado com o papel registrado aqui — a
+// estrutura de acesso continua sendo a mesma de sempre.
+model Invitation {
+  id        String @id @default(cuid())
+  companyId String
+  email     String
+  // owner | manager | staff — os mesmos papeis do Membership.
+  role      String @default("staff")
+  // 32 bytes aleatorios em base64url. Vai na URL do convite e e a unica coisa
+  // que prova quem foi convidado, entao nao pode ser adivinhavel.
+  token     String @unique
+  // pendente | aceito | revogado. "Expirado" nao e status: sai da comparacao
+  // com expiresAt, para nao existirem duas verdades sobre a mesma data.
+  status    String @default("pendente")
+
+  invitedById  String?
+  acceptedById String?
+  expiresAt    DateTime
+  acceptedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  company    Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  invitedBy  User?   @relation("InvitationCreatedBy", fields: [invitedById], references: [id], onDelete: SetNull)
+  acceptedBy User?   @relation("InvitationAcceptedBy", fields: [acceptedById], references: [id], onDelete: SetNull)
+
+  @@index([companyId, status])
+  @@index([email])
+  @@map("invitations")
 }
 
 // ---------------------------------------------------------------------------
