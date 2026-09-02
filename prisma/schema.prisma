@@ -32,6 +32,7 @@ model User {
   updatedAt    DateTime @updatedAt
 
   memberships Membership[]
+  contactLogs ContactLog[]
 
   @@map("users")
 }
@@ -51,6 +52,9 @@ model Company {
   // Regras de negocio usadas pelo motor de retencao
   retentionWindowDays Int      @default(90) // ciclo ideal de retorno do cliente
   inactiveAfterDays   Int      @default(180) // a partir daqui o cliente e "inativo"
+  // Depois de um contato registrado, por quantos dias o cliente sai da fila de
+  // prioridade. NAO altera o estagio de retencao dele — so a ordem da fila.
+  contactCooldownDays Int      @default(7)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
@@ -62,6 +66,7 @@ model Company {
   quotes       Quote[]
   workOrders   WorkOrder[]
   campaigns    Campaign[]
+  contactLogs  ContactLog[]
 
   @@map("companies")
 }
@@ -104,6 +109,7 @@ model Customer {
   appointments Appointment[]
   quotes       Quote[]
   workOrders   WorkOrder[]
+  contactLogs  ContactLog[]
 
   @@index([companyId, name])
   @@map("customers")
@@ -292,6 +298,34 @@ model WorkOrderItem {
 // ---------------------------------------------------------------------------
 // Crescimento
 // ---------------------------------------------------------------------------
+
+// Registro de um contato de retencao feito com o cliente.
+//
+// E a memoria que faltava na fila de retencao: sem isso o mesmo cliente
+// reaparece como prioridade todo dia, mesmo depois de ja ter sido chamado.
+// Nao interfere no calculo do estagio (novo/em dia/atencao/em risco/inativo) —
+// so alimenta o cooldown da fila.
+model ContactLog {
+  id          String   @id @default(cuid())
+  companyId   String
+  customerId  String
+  // Quem registrou. Opcional para que a exclusao de um usuario nao apague o
+  // historico de contatos da empresa.
+  userId      String?
+  channel     String   @default("whatsapp") // whatsapp | ligacao | instagram | outro
+  outcome     String   @default("realizado") // realizado | respondeu | sem_resposta | sem_interesse | interessado | agendou_retorno
+  contactedAt DateTime @default(now())
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  company  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, contactedAt])
+  @@index([customerId, contactedAt])
+  @@map("contact_logs")
+}
 
 model Campaign {
   id             String    @id @default(cuid())

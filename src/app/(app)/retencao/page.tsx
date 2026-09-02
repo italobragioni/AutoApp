@@ -1,6 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, MessageCircle, Repeat2, TrendingUp } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  Clock,
+  MessageCircle,
+  Repeat2,
+  TrendingUp,
+} from "lucide-react";
 
 import { DonutChart } from "@/components/charts";
 import {
@@ -16,7 +23,9 @@ import {
   Tr,
 } from "@/components/ui";
 import { OpportunityBanner, PageHeader, StatCard } from "@/components/ui/page";
-import { dateFull, money, phoneMask, whatsappLink } from "@/lib/format";
+import { attachContacts, type RetentionCustomerWithContact } from "@/lib/contacts";
+import { dateFull, dateShort, money, phoneMask, whatsappLink } from "@/lib/format";
+import { CONTACT_CHANNEL, CONTACT_OUTCOME, statusOf } from "@/lib/labels";
 import {
   STAGE_HINT,
   STAGE_LABEL,
@@ -26,6 +35,8 @@ import {
   getRetention,
 } from "@/lib/retention";
 import { requireContext } from "@/lib/tenant";
+
+import { RegisterContact } from "./ContactActions";
 
 export const metadata: Metadata = { title: "Retenção" };
 
@@ -37,8 +48,17 @@ const STAGE_COLOR: Record<RetentionStage, string> = {
   novo: "#38BDF8",
 };
 
-const TABS: { key: string; label: string; stages: RetentionStage[] }[] = [
-  { key: "prioridade", label: "Prioridade de contato", stages: ["em_risco", "inativo", "atencao"] },
+/**
+ * Abas da lista.
+ *
+ * "prioridade" e "cooldown" sao as duas metades da fila de contato: quem
+ * precisa ser chamado agora e quem ja foi chamado ha pouco. As abas por
+ * estagio continuam mostrando a carteira inteira — um contato registrado nao
+ * tira ninguem do motor de retencao.
+ */
+const TABS: { key: string; label: string; stages?: RetentionStage[] }[] = [
+  { key: "prioridade", label: "Prioridade de contato" },
+  { key: "cooldown", label: "Aguardando retorno" },
   { key: "em_risco", label: "Em risco", stages: ["em_risco"] },
   { key: "inativo", label: "Inativos", stages: ["inativo"] },
   { key: "atencao", label: "Atenção", stages: ["atencao"] },
@@ -59,6 +79,35 @@ function messageFor(customer: RetentionCustomer, companyName: string) {
   return `Olá ${firstName}! Aqui é da ${companyName}. O ${vehicle} está chegando no período ideal de manutenção. Tenho horários disponíveis esta semana — quer garantir o seu?`;
 }
 
+/** Coluna "Último contato": data, resultado e o cooldown quando ativo. */
+function ContactCell({ customer }: { customer: RetentionCustomerWithContact }) {
+  const { last, inCooldown, nextContactAt, cooldownDaysLeft } = customer.contact;
+
+  if (!last) {
+    return <span className="text-xs text-muted">Nenhum contato registrado</span>;
+  }
+
+  const outcome = statusOf(CONTACT_OUTCOME, last.outcome);
+
+  return (
+    <div className="space-y-1">
+      <span className="block text-sm text-soft">{dateFull(last.at)}</span>
+      <span className="block text-xs text-muted">
+        {CONTACT_CHANNEL[last.channel] ?? last.channel}
+        {last.byName ? ` · ${last.byName.split(" ")[0]}` : ""}
+      </span>
+      <Badge tone={outcome.tone}>{outcome.label}</Badge>
+      {inCooldown && nextContactAt && (
+        <span className="flex items-center gap-1 text-[0.68rem] text-sky-300">
+          <Clock size={11} className="shrink-0" />
+          Aguardando {cooldownDaysLeft} {cooldownDaysLeft === 1 ? "dia" : "dias"} · volta em{" "}
+          {dateShort(nextContactAt)}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export default async function RetentionPage({
   searchParams,
 }: {
@@ -68,11 +117,21 @@ export default async function RetentionPage({
   const tabKey = (await searchParams).aba ?? "prioridade";
   const tab = TABS.find((item) => item.key === tabKey) ?? TABS[0];
 
+  // O motor de retencao roda exatamente como antes; `attachContacts` so anexa
+  // o historico de contato por cima do resultado dele.
   const retention = await getRetention(company.id);
+  const board = await attachContacts(retention, company.id, company.contactCooldownDays);
 
-  const list = tab.stages
-    .flatMap((stage) => retention.byStage[stage])
-    .sort((a, b) => b.overdueDays - a.overdueDays || b.opportunityCents - a.opportunityCents);
+  function listFor(key: string) {
+    const item = TABS.find((entry) => entry.key === key);
+    if (key === "prioridade") return board.priority;
+    if (key === "cooldown") return board.inCooldown;
+    return (item?.stages ?? [])
+      .flatMap((stage) => board.byStage[stage])
+      .sort((a, b) => b.overdueDays - a.overdueDays || b.opportunityCents - a.opportunityCents);
+  }
+
+  const list = listFor(tab.key);
 
   const donut = (["em_dia", "atencao", "em_risco", "inativo", "novo"] as RetentionStage[])
     .map((stage) => ({
@@ -107,8 +166,16 @@ export default async function RetentionPage({
         description={
           <>
             Cálculo baseado no ticket médio histórico de cada cliente que passou do ciclo ideal de
-            retorno. São <strong className="text-white">{retention.needsContactCount}</strong>{" "}
-            clientes esperando um contato seu.
+            retorno. São <strong className="text-white">{board.priority.length}</strong> clientes
+            esperando um contato seu
+            {board.inCooldown.length > 0 && (
+              <>
+                {" "}
+                — outros <strong className="text-white">{board.inCooldown.length}</strong> já foram
+                contatados nos últimos {company.contactCooldownDays} dias
+              </>
+            )}
+            .
           </>
         }
         action={
@@ -141,9 +208,13 @@ export default async function RetentionPage({
           tone="volt"
         />
         <StatCard
-          label="Carteira em dia"
-          value={`${Math.round((retention.counts.em_dia / (retention.customers.length || 1)) * 100)}%`}
-          hint={`${retention.counts.em_dia} de ${retention.customers.length} clientes`}
+          label="Contatar agora"
+          value={board.priority.length}
+          hint={
+            board.inCooldown.length > 0
+              ? `${board.inCooldown.length} aguardando retorno`
+              : `Cooldown de ${company.contactCooldownDays} dias`
+          }
           icon={<Repeat2 size={17} />}
         />
       </div>
@@ -198,7 +269,8 @@ export default async function RetentionPage({
             <Link href="/configuracoes" className="text-volt-400 hover:text-volt-300">
               Configurações
             </Link>
-            .
+            . Registrar um contato não muda o estágio do cliente: apenas tira ele da fila de
+            prioridade por {company.contactCooldownDays} dias.
           </p>
         </Card>
       </div>
@@ -206,7 +278,7 @@ export default async function RetentionPage({
       <Card>
         <div className="flex flex-wrap gap-2 border-b border-line p-4">
           {TABS.map((item) => {
-            const count = item.stages.reduce((sum, stage) => sum + retention.counts[stage], 0);
+            const count = listFor(item.key).length;
             const active = item.key === tab.key;
             return (
               <Link
@@ -228,8 +300,14 @@ export default async function RetentionPage({
         {list.length === 0 ? (
           <EmptyState
             icon={<Repeat2 size={20} />}
-            title="Nenhum cliente nesta lista"
-            description="Boa notícia: ninguém aqui precisa de contato agora."
+            title={
+              tab.key === "cooldown" ? "Ninguém aguardando retorno" : "Nenhum cliente nesta lista"
+            }
+            description={
+              tab.key === "cooldown"
+                ? "Aqui ficam os clientes já contatados, durante o período de espera."
+                : "Boa notícia: ninguém aqui precisa de contato agora."
+            }
           />
         ) : (
           <Table>
@@ -239,7 +317,7 @@ export default async function RetentionPage({
                 <Th>Veículo</Th>
                 <Th>Último serviço</Th>
                 <Th>Retorno ideal</Th>
-                <Th className="text-right">Ticket médio</Th>
+                <Th>Último contato</Th>
                 <Th>Situação</Th>
                 <Th className="text-right">Ação</Th>
               </tr>
@@ -291,28 +369,35 @@ export default async function RetentionPage({
                       <span className="text-muted">—</span>
                     )}
                   </Td>
-                  <Td className="text-right text-sm font-medium text-white">
-                    {money(customer.averageTicketCents)}
+                  <Td>
+                    <ContactCell customer={customer} />
                   </Td>
                   <Td>
                     <Badge tone={STAGE_TONE[customer.stage]} dot>
                       {STAGE_LABEL[customer.stage]}
                     </Badge>
                   </Td>
-                  <Td className="text-right">
-                    {customer.phone ? (
-                      <a
-                        href={whatsappLink(customer.phone, messageFor(customer, company.name))}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="focus-ring inline-flex items-center gap-1.5 rounded-xl bg-volt-400/12 px-3 py-1.5 text-xs font-semibold text-volt-300 transition-colors hover:bg-volt-400/20"
-                      >
-                        <MessageCircle size={13} />
-                        Chamar
-                      </a>
-                    ) : (
-                      <span className="text-xs text-muted">Sem telefone</span>
-                    )}
+                  <Td>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      {customer.phone ? (
+                        <a
+                          href={whatsappLink(customer.phone, messageFor(customer, company.name))}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="focus-ring inline-flex items-center gap-1.5 rounded-xl bg-volt-400/12 px-3 py-1.5 text-xs font-semibold text-volt-300 transition-colors hover:bg-volt-400/20"
+                        >
+                          <MessageCircle size={13} />
+                          Chamar
+                        </a>
+                      ) : (
+                        <span className="text-xs text-muted">Sem telefone</span>
+                      )}
+                      <RegisterContact
+                        customer={{ id: customer.id, name: customer.name }}
+                        cooldownDays={company.contactCooldownDays}
+                        compact
+                      />
+                    </div>
                   </Td>
                 </Tr>
               ))}

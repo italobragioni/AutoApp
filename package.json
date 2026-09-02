@@ -21,6 +21,7 @@
     "test:agenda": "node scripts/test-agenda.mjs",
     "test:ordens": "node scripts/test-ordens.mjs",
     "test:orcamentos": "node scripts/test-orcamentos.mjs",
+    "test:retencao": "node scripts/test-retencao.mjs",
     "test:mobile": "node scripts/test-mobile-forms.mjs"
   },
   "dependencies": {

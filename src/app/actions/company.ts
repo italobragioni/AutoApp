@@ -70,6 +70,12 @@ const retentionSchema = z.object({
     .int()
     .min(30, "O prazo mínimo de inatividade é de 30 dias.")
     .max(1095, "O prazo máximo é de 1095 dias."),
+  // Configuracao central do cooldown de contato (src/lib/contacts.ts).
+  contactCooldownDays: z
+    .number()
+    .int()
+    .min(1, "O cooldown mínimo é de 1 dia.")
+    .max(90, "O cooldown máximo é de 90 dias."),
 });
 
 export async function updateRetentionAction(
@@ -84,6 +90,7 @@ export async function updateRetentionAction(
   const parsed = retentionSchema.safeParse({
     retentionWindowDays: Number(formData.get("retentionWindowDays")),
     inactiveAfterDays: Number(formData.get("inactiveAfterDays")),
+    contactCooldownDays: Number(formData.get("contactCooldownDays")),
   });
 
   if (!parsed.success) {

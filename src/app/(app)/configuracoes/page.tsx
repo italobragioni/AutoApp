@@ -72,10 +72,13 @@ export default async function SettingsPage() {
               <RetentionForm
                 retentionWindowDays={company.retentionWindowDays}
                 inactiveAfterDays={company.inactiveAfterDays}
+                contactCooldownDays={company.contactCooldownDays}
               />
             ) : (
               <CardBody className="text-sm text-muted">
-                Ciclo de {company.retentionWindowDays} dias · inativo após {company.inactiveAfterDays} dias.
+                Ciclo de {company.retentionWindowDays} dias · inativo após{" "}
+                {company.inactiveAfterDays} dias · cooldown de contato de{" "}
+                {company.contactCooldownDays} dias.
               </CardBody>
             )}
           </Card>

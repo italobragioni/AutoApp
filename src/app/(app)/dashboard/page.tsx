@@ -13,6 +13,7 @@ import {
 import { LineChart } from "@/components/charts";
 import { Badge, Card, CardBody, CardHeader, ButtonLink, EmptyState } from "@/components/ui";
 import { OpportunityBanner, PageHeader, StatCard } from "@/components/ui/page";
+import { attachContacts } from "@/lib/contacts";
 import { db } from "@/lib/db";
 import { dateFull, money, moneyCompact, phoneMask, samePeriodHint, time, whatsappLink } from "@/lib/format";
 import { APPOINTMENT_STATUS, WORK_ORDER_STATUS, statusOf } from "@/lib/labels";
@@ -54,8 +55,19 @@ export default async function DashboardPage() {
     }),
   ]);
 
+  // O motor de retencao continua intacto; o board so anexa o ultimo contato de
+  // cada cliente e separa quem esta em cooldown.
+  const board = await attachContacts(retention, companyId, company.contactCooldownDays);
+
   const firstName = user.name.split(" ")[0];
-  const priority = [...retention.byStage.em_risco, ...retention.byStage.inativo].slice(0, 5);
+  // Mesmo recorte de sempre (em risco + inativos), agora sem quem ja foi
+  // contatado nos ultimos dias.
+  const priority = board.priority
+    .filter((customer) => customer.stage === "em_risco" || customer.stage === "inativo")
+    .slice(0, 5);
+  const waitingCount = board.inCooldown.filter(
+    (customer) => customer.stage === "em_risco" || customer.stage === "inativo",
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -83,9 +95,21 @@ export default async function DashboardPage() {
           title={`${moneyCompact(retention.opportunityCents)} em oportunidades de retorno`}
           description={
             <>
-              <strong className="text-white">{retention.needsContactCount}</strong>{" "}
-              {retention.needsContactCount === 1 ? "cliente passou" : "clientes passaram"} do ciclo ideal
-              de retorno. Um contato hoje evita perder esse faturamento.
+              {board.priority.length > 0 ? (
+                <>
+                  <strong className="text-white">{board.priority.length}</strong>{" "}
+                  {board.priority.length === 1 ? "cliente espera" : "clientes esperam"} um contato
+                  seu.
+                </>
+              ) : (
+                <>
+                  Todos os clientes fora do ciclo já foram contatados. Eles voltam para a fila
+                  quando o período de espera terminar.
+                </>
+              )}
+              {board.priority.length > 0 && board.inCooldown.length > 0 && (
+                <> Outros {board.inCooldown.length} estão no período de espera.</>
+              )}
             </>
           }
           action={
@@ -261,13 +285,29 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader
             title="Contatar hoje"
-            description="Clientes com maior risco de não voltar."
+            description={
+              waitingCount > 0
+                ? `Maior risco de não voltar. ${waitingCount} ${waitingCount === 1 ? "cliente já foi contatado" : "clientes já foram contatados"} e estão fora da fila.`
+                : "Clientes com maior risco de não voltar."
+            }
+            action={
+              <Link
+                href="/retencao"
+                className="focus-ring rounded text-xs font-medium text-volt-400 hover:text-volt-300"
+              >
+                Registrar contato
+              </Link>
+            }
           />
           {priority.length === 0 ? (
             <EmptyState
               icon={<Repeat2 size={20} />}
-              title="Carteira em dia"
-              description="Nenhum cliente passou do ciclo de retorno."
+              title={waitingCount > 0 ? "Fila em dia" : "Carteira em dia"}
+              description={
+                waitingCount > 0
+                  ? "Todos os clientes em risco já foram contatados. Eles voltam para a fila quando o período de espera terminar."
+                  : "Nenhum cliente passou do ciclo de retorno."
+              }
             />
           ) : (
             <ul className="divide-y divide-line">

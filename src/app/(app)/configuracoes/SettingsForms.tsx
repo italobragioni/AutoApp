@@ -98,9 +98,11 @@ export function CompanyForm({
 export function RetentionForm({
   retentionWindowDays,
   inactiveAfterDays,
+  contactCooldownDays,
 }: {
   retentionWindowDays: number;
   inactiveAfterDays: number;
+  contactCooldownDays: number;
 }) {
   const [state, formAction] = useActionState<SettingsState, FormData>(
     updateRetentionAction,
@@ -139,6 +141,20 @@ export function RetentionForm({
           />
         </Field>
       </div>
+
+      <Field
+        label="Cooldown de contato (dias)"
+        hint="Depois de um contato registrado, o cliente sai da fila de prioridade por este período. O estágio de retenção dele não muda."
+      >
+        <Input
+          type="number"
+          name="contactCooldownDays"
+          defaultValue={contactCooldownDays}
+          min={1}
+          max={90}
+          required
+        />
+      </Field>
 
       <Submit label="Salvar regras de retenção" />
     </form>

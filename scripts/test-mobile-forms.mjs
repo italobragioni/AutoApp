@@ -84,6 +84,21 @@ await typeKeepingFocus(p, 'input[name="plate"]', "BRA2E19", "Placa");
 await checkFontSize(p, 'input[name="brand"]', "Marca");
 await checkFontSize(p, 'input[name="mileage"]', "Quilometragem");
 
+console.log("\n▸ FORMULÁRIO DE CONTATO (RETENÇÃO)");
+await p.goto(`${BASE}/retencao`, { waitUntil: "networkidle" });
+const registrar = p.locator('tbody button:has-text("Registrar")').first();
+if ((await registrar.count()) > 0) {
+  await registrar.click();
+  await p.waitForSelector('[role="dialog"]');
+  await typeKeepingFocus(p, 'textarea[name="notes"]', "Cliente pediu retorno", "Observação");
+  await checkFontSize(p, 'input[name="contactedAt"]', "Data e hora do contato");
+  await checkFontSize(p, 'select[name="channel"]', "Tipo de contato");
+  await checkFontSize(p, 'select[name="outcome"]', "Status do contato");
+  await checkFontSize(p, 'textarea[name="notes"]', "Observação");
+} else {
+  console.log("  --   nenhum cliente na fila de retenção nesta base; etapa pulada");
+}
+
 console.log("\n▸ CAMPOS FORA DE MODAL");
 await p.goto(`${BASE}/clientes`, { waitUntil: "networkidle" });
 await typeKeepingFocus(p, 'input[name="q"]', "Silva", "Busca de clientes");

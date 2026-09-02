@@ -60,6 +60,24 @@ export const CHANNEL_LABEL: Record<string, string> = {
   instagram: "Instagram",
 };
 
+/** Como o contato de retencao foi feito. */
+export const CONTACT_CHANNEL: Record<string, string> = {
+  whatsapp: "WhatsApp",
+  ligacao: "Ligação",
+  instagram: "Instagram",
+  outro: "Outro",
+};
+
+/** No que o contato deu. Nao altera o estagio de retencao do cliente. */
+export const CONTACT_OUTCOME: Record<string, { label: string; tone: Tone }> = {
+  realizado: { label: "Contato realizado", tone: "neutral" },
+  respondeu: { label: "Cliente respondeu", tone: "info" },
+  sem_resposta: { label: "Sem resposta", tone: "muted" },
+  sem_interesse: { label: "Não tem interesse", tone: "danger" },
+  interessado: { label: "Interessado", tone: "volt" },
+  agendou_retorno: { label: "Agendou retorno", tone: "success" },
+};
+
 export const ORIGIN_LABEL: Record<string, string> = {
   indicacao: "Indicação",
   instagram: "Instagram",
