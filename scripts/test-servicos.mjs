@@ -261,10 +261,18 @@ for (const { href, anterior } of originais) {
   await p.click('#service-form button[type="submit"]');
   await p.waitForTimeout(1500);
 }
-await p.goto(`${BASE}${clienteHref}`, { waitUntil: "networkidle" });
+// Confere a restauracao pelo proprio campo do servico. A data de retorno
+// derivada depende do ultimo atendimento do cliente, que outros testes podem
+// ter alterado nesta mesma base — o valor do campo e o dado direto.
+let restauradas = 0;
+for (const { href, anterior } of originais) {
+  await p.goto(`${BASE}${href}`, { waitUntil: "networkidle" });
+  await p.waitForSelector('[role="dialog"]');
+  if ((await p.inputValue('input[name="recurrenceDays"]')) === anterior) restauradas += 1;
+}
 check(
-  (await retornoIdeal(p)) === retornoAntes,
-  "recorrência restaurada devolve a data de retorno original",
+  restauradas === originais.length,
+  `recorrência restaurada em ${restauradas}/${originais.length} serviços`,
 );
 
 console.log("\n▸ CONSOLE");

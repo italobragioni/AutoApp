@@ -64,7 +64,11 @@ await p.goto(`${BASE}/login`, { waitUntil: "networkidle" });
 await p.click('button[type="submit"]');
 await p.waitForURL("**/dashboard");
 
-const DATA = futureDate(21);
+// Cada execucao usa uma semana propria: o teste deixa agendamentos em estados
+// terminais (concluido, nao compareceu) que nao oferecem as acoes esperadas, e
+// reaproveitar a mesma data faria a rodada seguinte falhar por resíduo.
+const OFFSET = 21 + (Math.floor(Date.now() / 1000) % 60);
+const DATA = futureDate(OFFSET);
 const HORA = "08:00";
 
 console.log("\n▸ ABRIR FORMULÁRIO");
@@ -115,9 +119,18 @@ const precoAuto = await p.inputValue('input[name="price"]');
 const duracaoAuto = await p.inputValue('input[name="durationMin"]');
 check(precoAuto !== "" && precoAuto !== "0,00", `preço preenchido pelo catálogo (${precoAuto})`);
 check(duracaoAuto !== "" && duracaoAuto !== "0", `duração preenchida pelo catálogo (${duracaoAuto}min)`);
+// Compara numericamente: o campo traz "1480,50" e o rotulo "R$ 1.480,50",
+// entao comparar como texto falharia por causa do separador de milhar.
+const centavosDoCampo = Math.round(
+  Number(precoAuto.replace(/\./g, "").replace(",", ".")) * 100,
+);
+const centavosDoRotulo = (() => {
+  const m = norm(rotuloServico).match(/R\$\s*([\d.]+,\d{2})/);
+  return m ? Math.round(Number(m[1].replace(/\./g, "").replace(",", ".")) * 100) : -1;
+})();
 check(
-  norm(rotuloServico).includes(precoAuto.replace(",", ",")),
-  `valor bate com o do catálogo (${norm(rotuloServico).split("·")[0].trim().slice(-12)})`,
+  centavosDoCampo === centavosDoRotulo && centavosDoCampo > 0,
+  `valor bate com o do catálogo (${precoAuto} = ${centavosDoRotulo / 100})`,
 );
 
 console.log("\n▸ VALIDAÇÃO");
@@ -178,11 +191,22 @@ check(
 );
 
 console.log("\n▸ EDITAR / REMARCAR");
-const linhas = p.locator('a[href^="/agenda?editar="]');
-const editarHref = await linhas.first().getAttribute("href");
-const agendamentoId = editarHref.split("editar=")[1].split("&")[0];
-await p.goto(`${BASE}/agenda?editar=${agendamentoId}`, { waitUntil: "networkidle" });
-await p.waitForSelector('[role="dialog"]');
+// Escolhe o agendamento que ESTE teste criou, e nao "o primeiro da semana":
+// execucoes anteriores podem ter deixado registros na mesma semana.
+const hrefs = await p
+  .locator('a[href^="/agenda?editar="]')
+  .evaluateAll((els) => els.map((e) => e.getAttribute("href")));
+let agendamentoId = null;
+for (const href of hrefs) {
+  const id = href.split("editar=")[1].split("&")[0];
+  await p.goto(`${BASE}/agenda?editar=${id}`, { waitUntil: "networkidle" });
+  await p.waitForSelector('[role="dialog"]');
+  if ((await p.inputValue('input[name="date"]')) === DATA) {
+    agendamentoId = id;
+    break;
+  }
+}
+check(agendamentoId !== null, "encontrou o agendamento criado pelo teste");
 check(
   (await p.inputValue('input[name="date"]')) === DATA,
   "formulário de edição abre preenchido com a data",
@@ -193,7 +217,7 @@ check(
 );
 
 // Remarca para outro dia e outro horário.
-const NOVA_DATA = futureDate(23);
+const NOVA_DATA = futureDate(OFFSET + 2);
 await p.fill('input[name="date"]', NOVA_DATA);
 await p.fill('input[name="time"]', "15:30");
 await p.click('#appointment-form button[type="submit"]');

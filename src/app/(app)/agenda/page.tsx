@@ -12,6 +12,7 @@ import { requireContext } from "@/lib/tenant";
 
 import { AppointmentForm } from "./AppointmentForm";
 import { AppointmentStatusActions } from "./AppointmentStatusActions";
+import { CreateWorkOrderFromAppointment } from "./CreateWorkOrderFromAppointment";
 
 export const metadata: Metadata = { title: "Agenda" };
 
@@ -53,6 +54,8 @@ export default async function AgendaPage({
       services: {
         include: { serviceItem: { select: { id: true, name: true, basePrice: true } } },
       },
+      // Saber se ja existe OS evita oferecer criar uma segunda.
+      workOrder: { select: { id: true } },
     },
   });
 
@@ -354,6 +357,10 @@ export default async function AgendaPage({
                     </Link>
                     <AppointmentStatusActions
                       appointment={{ id: item.id, status: item.status }}
+                    />
+                    <CreateWorkOrderFromAppointment
+                      appointmentId={item.id}
+                      workOrderId={item.workOrder?.id ?? null}
                     />
                   </div>
                 </div>

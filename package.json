@@ -19,6 +19,7 @@
     "test:veiculos": "node scripts/test-veiculos.mjs",
     "test:servicos": "node scripts/test-servicos.mjs",
     "test:agenda": "node scripts/test-agenda.mjs",
+    "test:ordens": "node scripts/test-ordens.mjs",
     "test:mobile": "node scripts/test-mobile-forms.mjs"
   },
   "dependencies": {

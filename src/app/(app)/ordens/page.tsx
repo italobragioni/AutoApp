@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CircleDollarSign, Plus, Wrench } from "lucide-react";
+import { CheckCircle2, CircleDollarSign, Plus, Wrench } from "lucide-react";
 
 import {
   Badge,
@@ -20,6 +20,8 @@ import { PAYMENT_LABEL, WORK_ORDER_STATUS, statusOf } from "@/lib/labels";
 import { startOfMonth } from "@/lib/metrics";
 import { requireContext } from "@/lib/tenant";
 
+import { WorkOrderForm } from "./WorkOrderForm";
+
 export const metadata: Metadata = { title: "Ordens de Serviço" };
 
 const BOARD = ["aberta", "em_andamento", "aguardando_retirada"] as const;
@@ -27,10 +29,12 @@ const BOARD = ["aberta", "em_andamento", "aguardando_retirada"] as const;
 export default async function WorkOrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; nova?: string }>;
 }) {
   const { company } = await requireContext();
-  const statusFilter = (await searchParams).status ?? "";
+  const params = await searchParams;
+  const statusFilter = params.status ?? "";
+  const creating = params.nova === "1";
 
   const [orders, active, monthOrders] = await Promise.all([
     db.workOrder.findMany({
@@ -59,10 +63,43 @@ export default async function WorkOrdersPage({
   ]);
 
   const monthRevenue = monthOrders.reduce((sum, order) => sum + order.totalCents, 0);
+
+  // Opcoes do formulario — sempre escopadas pela empresa da sessao.
+  const [customerRows, serviceRows] = await Promise.all([
+    db.customer.findMany({
+      where: { companyId: company.id, vehicles: { some: {} } },
+      select: {
+        id: true,
+        name: true,
+        vehicles: { select: { id: true, brand: true, model: true, plate: true } },
+      },
+      orderBy: { name: "asc" },
+    }),
+    db.serviceItem.findMany({
+      where: { companyId: company.id, active: true },
+      select: { id: true, name: true, basePrice: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
+  const customerOptions = customerRows.map((customer) => ({
+    id: customer.id,
+    name: customer.name,
+    vehicles: customer.vehicles.map((v) => ({
+      id: v.id,
+      label: `${v.brand} ${v.model}${v.plate ? ` · ${v.plate}` : ""}`,
+    })),
+  }));
   const inProgressValue = active.reduce((sum, order) => sum + order.totalCents, 0);
 
   return (
     <div className="space-y-6">
+      <WorkOrderForm
+        open={creating}
+        customers={customerOptions}
+        services={serviceRows}
+        closeHref="/ordens"
+      />
+
       <PageHeader
         eyebrow="Operação"
         title="Ordens de Serviço"
@@ -100,9 +137,10 @@ export default async function WorkOrdersPage({
                   <p className="px-2 py-8 text-center text-xs text-muted">Nada nesta etapa</p>
                 ) : (
                   list.map((order) => (
-                    <div
+                    <Link
                       key={order.id}
-                      className="rounded-xl border border-line bg-ink-850/60 p-3.5"
+                      href={`/ordens/${order.id}`}
+                      className="focus-ring block rounded-xl border border-line bg-ink-850/60 p-3.5 transition-colors hover:border-ink-600"
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-display text-[0.7rem] font-bold text-muted">
@@ -112,12 +150,9 @@ export default async function WorkOrdersPage({
                           {money(order.totalCents)}
                         </span>
                       </div>
-                      <Link
-                        href={`/clientes/${order.customer.id}`}
-                        className="focus-ring mt-1.5 block truncate rounded text-sm font-medium text-white hover:text-volt-300"
-                      >
+                      <span className="mt-1.5 block truncate text-sm font-medium text-white">
                         {order.customer.name}
-                      </Link>
+                      </span>
                       <p className="truncate text-xs text-muted">
                         {order.vehicle
                           ? `${order.vehicle.brand} ${order.vehicle.model}`
@@ -129,7 +164,7 @@ export default async function WorkOrdersPage({
                       <p className="mt-2 text-[0.68rem] text-muted">
                         Aberta em {dateFull(order.openedAt)} às {time(order.openedAt)}
                       </p>
-                    </div>
+                    </Link>
                   ))
                 )}
               </div>
@@ -194,8 +229,13 @@ export default async function WorkOrdersPage({
                 const meta = statusOf(WORK_ORDER_STATUS, order.status);
                 return (
                   <Tr key={order.id}>
-                    <Td className="font-display text-xs font-bold text-muted">
-                      #{String(order.number).padStart(4, "0")}
+                    <Td>
+                      <Link
+                        href={`/ordens/${order.id}`}
+                        className="focus-ring rounded font-display text-xs font-bold text-volt-400 hover:text-volt-300"
+                      >
+                        #{String(order.number).padStart(4, "0")}
+                      </Link>
                     </Td>
                     <Td>
                       <Link
