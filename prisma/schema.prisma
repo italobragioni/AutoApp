@@ -172,6 +172,9 @@ model Appointment {
   startsAt   DateTime
   endsAt     DateTime
   status     String   @default("agendado") // agendado | confirmado | em_andamento | concluido | cancelado | nao_compareceu
+  // Valor combinado com o cliente. Nulo = usar a soma dos precos dos servicos
+  // do catalogo (comportamento historico). Preenchido = valor negociado.
+  priceCents Int?
   notes      String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt

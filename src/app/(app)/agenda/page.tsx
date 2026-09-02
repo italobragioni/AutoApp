@@ -1,13 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, Clock, Pencil } from "lucide-react";
 
 import { Badge, ButtonLink, Card, CardBody, CardHeader, EmptyState } from "@/components/ui";
 import { PageHeader, StatCard } from "@/components/ui/page";
 import { db } from "@/lib/db";
 import { cn, money, time } from "@/lib/format";
 import { APPOINTMENT_STATUS, statusOf } from "@/lib/labels";
+import { appointmentValueCents } from "@/lib/agenda";
 import { requireContext } from "@/lib/tenant";
+
+import { AppointmentForm } from "./AppointmentForm";
+import { AppointmentStatusActions } from "./AppointmentStatusActions";
 
 export const metadata: Metadata = { title: "Agenda" };
 
@@ -30,10 +34,11 @@ function isoDate(date: Date) {
 export default async function AgendaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ semana?: string }>;
+  searchParams: Promise<{ semana?: string; novo?: string; editar?: string }>;
 }) {
   const { company } = await requireContext();
   const params = await searchParams;
+  const creating = params.novo === "1";
 
   const base = params.semana ? new Date(`${params.semana}T12:00:00`) : new Date();
   const start = weekStart(Number.isNaN(base.getTime()) ? new Date() : base);
@@ -45,7 +50,9 @@ export default async function AgendaPage({
     include: {
       customer: { select: { id: true, name: true } },
       vehicle: { select: { brand: true, model: true, plate: true } },
-      services: { include: { serviceItem: { select: { name: true, basePrice: true } } } },
+      services: {
+        include: { serviceItem: { select: { id: true, name: true, basePrice: true } } },
+      },
     },
   });
 
@@ -59,13 +66,52 @@ export default async function AgendaPage({
     };
   });
 
+  // Opcoes do formulario — sempre escopadas pela empresa da sessao.
+  // Só clientes com veículo entram: um agendamento exige os dois.
+  const [customerRows, serviceRows] = await Promise.all([
+    db.customer.findMany({
+      where: { companyId: company.id, vehicles: { some: {} } },
+      select: {
+        id: true,
+        name: true,
+        vehicles: { select: { id: true, brand: true, model: true, plate: true } },
+      },
+      orderBy: { name: "asc" },
+    }),
+    db.serviceItem.findMany({
+      where: { companyId: company.id, active: true },
+      select: { id: true, name: true, basePrice: true, durationMin: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
+
+  const customerOptions = customerRows.map((customer) => ({
+    id: customer.id,
+    name: customer.name,
+    vehicles: customer.vehicles.map((vehicle) => ({
+      id: vehicle.id,
+      label: `${vehicle.brand} ${vehicle.model}${vehicle.plate ? ` · ${vehicle.plate}` : ""}`,
+    })),
+  }));
+
+  // Busca independente do filtro de semana: editar um agendamento de outra
+  // semana precisa funcionar (o link direto, por exemplo). O escopo continua
+  // sendo a empresa da sessao — id de outra empresa simplesmente nao retorna.
+  const editing = params.editar
+    ? await db.appointment.findFirst({
+        where: { id: params.editar, companyId: company.id },
+        include: {
+          // Os precos vem junto para o helper calcular o valor efetivo de
+          // agendamentos antigos, que tem priceCents nulo.
+          services: { include: { serviceItem: { select: { id: true, basePrice: true } } } },
+        },
+      })
+    : null;
+
   const todayIso = isoDate(new Date());
   const active = appointments.filter((item) => item.status !== "cancelado");
-  const weekValue = active.reduce(
-    (sum, item) =>
-      sum + item.services.reduce((total, entry) => total + (entry.serviceItem?.basePrice ?? 0), 0),
-    0,
-  );
+  // Usa o valor combinado quando existir; senao, a soma do catalogo.
+  const weekValue = active.reduce((sum, item) => sum + appointmentValueCents(item), 0);
   const occupiedMinutes = active.reduce(
     (sum, item) => sum + (item.endsAt.getTime() - item.startsAt.getTime()) / 60000,
     0,
@@ -78,6 +124,36 @@ export default async function AgendaPage({
 
   return (
     <div className="space-y-6">
+      <AppointmentForm
+        open={creating}
+        customers={customerOptions}
+        services={serviceRows}
+        closeHref="/agenda"
+      />
+      {editing && (
+        <AppointmentForm
+          open
+          customers={customerOptions}
+          services={serviceRows}
+          closeHref="/agenda"
+          appointment={{
+            id: editing.id,
+            customerId: editing.customerId,
+            vehicleId: editing.vehicleId ?? "",
+            serviceIds: editing.services.map((entry) => entry.serviceItemId),
+            date: isoDate(editing.startsAt),
+            time: editing.startsAt.toTimeString().slice(0, 5),
+            durationMin: Math.round(
+              (editing.endsAt.getTime() - editing.startsAt.getTime()) / 60000,
+            ),
+            // Valor combinado quando existir; senao, a soma do catalogo.
+            priceCents: appointmentValueCents(editing),
+            status: editing.status,
+            notes: editing.notes,
+          }}
+        />
+      )}
+
       <PageHeader
         eyebrow="Operação"
         title="Agenda"
@@ -217,7 +293,7 @@ export default async function AgendaPage({
           title="Detalhamento da semana"
           description="Todos os atendimentos em ordem cronológica."
         />
-        {active.length === 0 ? (
+        {appointments.length === 0 ? (
           <EmptyState
             icon={<CalendarDays size={20} />}
             title="Semana sem atendimentos"
@@ -230,16 +306,17 @@ export default async function AgendaPage({
           />
         ) : (
           <CardBody className="space-y-2.5 p-3">
-            {active.map((item) => {
+            {appointments.map((item) => {
               const status = statusOf(APPOINTMENT_STATUS, item.status);
-              const total = item.services.reduce(
-                (sum, entry) => sum + (entry.serviceItem?.basePrice ?? 0),
-                0,
-              );
+              const total = appointmentValueCents(item);
               return (
                 <div
                   key={item.id}
-                  className="flex flex-wrap items-center gap-3 rounded-xl border border-line bg-ink-850/60 px-4 py-3"
+                  className={cn(
+                    "flex flex-wrap items-center gap-3 rounded-xl border border-line bg-ink-850/60 px-4 py-3",
+                    (item.status === "cancelado" || item.status === "nao_compareceu") &&
+                      "opacity-60",
+                  )}
                 >
                   <div className="w-24 shrink-0">
                     <p className="text-xs font-medium text-white">
@@ -267,6 +344,18 @@ export default async function AgendaPage({
                   </p>
                   <span className="text-sm font-medium text-white">{money(total)}</span>
                   <Badge tone={status.tone}>{status.label}</Badge>
+                  <div className="flex w-full flex-wrap items-center gap-1 border-t border-line pt-2 lg:w-auto lg:border-0 lg:pt-0">
+                    <Link
+                      href={`/agenda?editar=${item.id}${params.semana ? `&semana=${params.semana}` : ""}`}
+                      className="focus-ring inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[0.7rem] font-medium text-soft transition-colors hover:bg-ink-800 hover:text-white"
+                    >
+                      <Pencil size={12} />
+                      Editar
+                    </Link>
+                    <AppointmentStatusActions
+                      appointment={{ id: item.id, status: item.status }}
+                    />
+                  </div>
                 </div>
               );
             })}

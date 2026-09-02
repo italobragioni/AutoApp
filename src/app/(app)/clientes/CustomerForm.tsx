@@ -1,11 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { AlertCircle } from "lucide-react";
 
 import { Button, Field, Input, Select, Textarea } from "@/components/ui";
+import { useActionForm } from "@/components/ui/action-form";
 import { Modal } from "@/components/ui/modal";
 import {
   createCustomerAction,
@@ -54,7 +55,9 @@ export function CustomerForm({
   const router = useRouter();
   const isEdit = Boolean(customer);
 
-  const [state, formAction] = useActionState<CustomerState, FormData>(
+  // useActionForm em vez de `action={formAction}`: o reset de formulario do
+  // React 19 zerava <select> e checkbox controlados a cada erro de validacao.
+  const { state, onSubmit } = useActionForm<CustomerState>(
     isEdit ? updateCustomerAction : createCustomerAction,
     undefined,
   );
@@ -98,7 +101,7 @@ export function CustomerForm({
       }
       size="lg"
     >
-      <form action={formAction} className="space-y-4 p-5" id="customer-form">
+      <form onSubmit={onSubmit} className="space-y-4 p-5" id="customer-form">
         {isEdit && <input type="hidden" name="id" value={customer!.id} />}
 
         {state?.error && (
