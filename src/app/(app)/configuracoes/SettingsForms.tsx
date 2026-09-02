@@ -99,10 +99,12 @@ export function RetentionForm({
   retentionWindowDays,
   inactiveAfterDays,
   contactCooldownDays,
+  attributionWindowDays,
 }: {
   retentionWindowDays: number;
   inactiveAfterDays: number;
   contactCooldownDays: number;
+  attributionWindowDays: number;
 }) {
   const [state, formAction] = useActionState<SettingsState, FormData>(
     updateRetentionAction,
@@ -152,6 +154,20 @@ export function RetentionForm({
           defaultValue={contactCooldownDays}
           min={1}
           max={90}
+          required
+        />
+      </Field>
+
+      <Field
+        label="Janela de atribuição das campanhas (dias)"
+        hint="Por quantos dias depois do envio uma OS concluída ainda conta como conversão daquela campanha."
+      >
+        <Input
+          type="number"
+          name="attributionWindowDays"
+          defaultValue={attributionWindowDays}
+          min={1}
+          max={180}
           required
         />
       </Field>

@@ -31,7 +31,7 @@ function check(ok, label) {
 }
 
 /** O Intl pt-BR usa espaco nao-quebravel depois de "R$". */
-const norm = (t) => t.replace(/ /g, " ");
+const norm = (t) => t.replace(/\u00a0/g, " ");
 
 function today() {
   return new Date().toISOString().slice(0, 10);

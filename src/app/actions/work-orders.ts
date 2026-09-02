@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { db } from "@/lib/db";
 import { appointmentValueCents } from "@/lib/agenda";
+import { attributeWorkOrder, detachWorkOrder } from "@/lib/campaigns";
 import { parseMoneyToCents } from "@/lib/format";
 import { PAYMENT_LABEL, WORK_ORDER_STATUS } from "@/lib/labels";
 import { requireContext } from "@/lib/tenant";
@@ -333,6 +334,13 @@ export async function changeWorkOrderStatusAction(
     },
   });
 
+  // A OS deixou de estar concluida: a campanha nao pode continuar contando essa
+  // receita. `detachWorkOrder` nao faz nada se ela nunca tinha sido atribuida.
+  if (status !== "concluida") {
+    await detachWorkOrder(existing.id);
+    revalidatePath("/campanhas");
+  }
+
   revalidateWorkOrder(existing.id, existing.customerId, existing.vehicleId);
   return { ok: true, id: existing.id };
 }
@@ -395,6 +403,13 @@ export async function completeWorkOrderAction(
       finishedAt: new Date(`${parsed.data.finishedAt}T12:00:00`),
     },
   });
+
+  // Conversao de campanha: se este cliente recebeu uma campanha recente dentro
+  // da janela de atribuicao, esta OS vira a conversao dela. A regra inteira
+  // mora em src/lib/campaigns.ts — aqui so avisamos que a OS fechou.
+  const attributed = await attributeWorkOrder(existing.id);
+  if (attributed) revalidatePath(`/campanhas/${attributed.campaignId}`);
+  revalidatePath("/campanhas");
 
   revalidateWorkOrder(existing.id, existing.customerId, existing.vehicleId);
   return { ok: true, id: existing.id };

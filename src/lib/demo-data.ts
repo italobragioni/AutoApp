@@ -678,6 +678,14 @@ export async function seedDemoDataForCompany(companyId: string) {
   }
 
   // 6. Campanhas de retencao
+  //
+  // As campanhas do demo nascem como rascunho, SEM participantes e sem
+  // contadores preenchidos. Antes elas vinham com numeros escritos a mao
+  // (24 enviadas, 7 conversoes, R$ 1.480 de receita) que nao correspondiam a
+  // nada no banco. Agora todo numero de Campanhas e calculado a partir de
+  // `CampaignParticipant`, entao inventar participantes aqui seria inventar
+  // metrica de novo — a campanha ganha participantes quando alguem a cria de
+  // verdade pela tela.
   await db.campaign.createMany({
     data: [
       {
@@ -685,34 +693,24 @@ export async function seedDemoDataForCompany(companyId: string) {
         name: "Volta pra casa — clientes em risco",
         channel: "whatsapp",
         audience: "em_risco",
-        status: "enviada",
+        status: "rascunho",
         message:
           "Oi {nome}! Faz um tempo que o {veiculo} não passa aqui. Preparei 15% de desconto na sua próxima lavagem detalhada. Posso reservar um horário?",
-        sentAt: daysAgo(18, 9),
-        sentCount: 24,
-        answeredCount: 11,
-        convertedCount: 7,
-        revenueCents: 148000,
       },
       {
         companyId,
         name: "Reativação 6 meses",
         channel: "whatsapp",
         audience: "inativos",
-        status: "enviada",
+        status: "rascunho",
         message:
           "{nome}, sentimos sua falta! Que tal deixar o {veiculo} novo de novo? Higienização completa com condição especial esta semana.",
-        sentAt: daysAgo(42, 10),
-        sentCount: 16,
-        answeredCount: 6,
-        convertedCount: 3,
-        revenueCents: 96000,
       },
       {
         companyId,
         name: "Lembrete de vitrificação (12 meses)",
         channel: "whatsapp",
-        audience: "sem_retorno",
+        audience: "atencao",
         status: "agendada",
         message:
           "Oi {nome}! A proteção do seu {veiculo} está chegando ao fim do ciclo. Quer agendar a revitalização?",

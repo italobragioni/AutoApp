@@ -22,6 +22,7 @@ export type CurrentContext = {
     retentionWindowDays: number;
     inactiveAfterDays: number;
     contactCooldownDays: number;
+    attributionWindowDays: number;
   };
   role: string;
   /** Todas as empresas as quais o usuario tem acesso (troca de empresa). */
@@ -74,6 +75,7 @@ export const getCurrentContext = cache(async (): Promise<CurrentContext | null> 
       retentionWindowDays: company.retentionWindowDays,
       inactiveAfterDays: company.inactiveAfterDays,
       contactCooldownDays: company.contactCooldownDays,
+      attributionWindowDays: company.attributionWindowDays,
     },
     role: membership.role,
     companies: memberships.map((m) => ({

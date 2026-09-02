@@ -42,6 +42,9 @@ export type RetentionCustomer = {
   name: string;
   phone: string | null;
   email: string | null;
+  /** So transporte: o publico de aniversariantes le daqui. Nao entra em
+   *  nenhum calculo de estagio. */
+  birthDate: Date | null;
   stage: RetentionStage;
   /** Dias desde o ultimo servico concluido. null = nunca fez servico. */
   daysSinceLastVisit: number | null;
@@ -145,6 +148,7 @@ export async function getRetention(companyId: string): Promise<RetentionSummary>
       name: customer.name,
       phone: customer.phone,
       email: customer.email,
+      birthDate: customer.birthDate,
       stage,
       daysSinceLastVisit,
       lastVisitAt,
@@ -189,6 +193,7 @@ export async function getRetention(companyId: string): Promise<RetentionSummary>
 /** Publicos-alvo disponiveis para campanhas, derivados do motor de retencao. */
 export const AUDIENCE_LABEL: Record<string, string> = {
   todos: "Todos os clientes",
+  atencao: "Clientes em atenção",
   em_risco: "Clientes em risco",
   inativos: "Clientes inativos",
   aniversariantes: "Aniversariantes do mês",
@@ -196,8 +201,37 @@ export const AUDIENCE_LABEL: Record<string, string> = {
   vip: "Clientes VIP",
 };
 
-export function audienceFor(summary: RetentionSummary, audience: string): RetentionCustomer[] {
+/**
+ * Aniversariantes de um mes, por dia e mes de nascimento.
+ *
+ * O ano nao entra: o que importa e a data comemorativa, nao a idade. O mes vem
+ * por parametro para que outros periodos (proxima semana, intervalo escolhido)
+ * possam ser adicionados depois sem mexer em quem chama.
+ */
+function birthdaysIn(customers: RetentionCustomer[], month: number) {
+  return customers
+    .filter((customer) => customer.birthDate !== null && customer.birthDate.getMonth() === month)
+    .sort((a, b) => (a.birthDate!.getDate() ?? 0) - (b.birthDate!.getDate() ?? 0));
+}
+
+/** Publicos oferecidos na criacao de campanha, na ordem em que aparecem. */
+export const CAMPAIGN_AUDIENCES = [
+  "atencao",
+  "em_risco",
+  "inativos",
+  "vip",
+  "aniversariantes",
+  "todos",
+];
+
+export function audienceFor(
+  summary: RetentionSummary,
+  audience: string,
+  now: Date = new Date(),
+): RetentionCustomer[] {
   switch (audience) {
+    case "atencao":
+      return summary.byStage.atencao;
     case "em_risco":
       return summary.byStage.em_risco;
     case "inativos":
@@ -209,7 +243,8 @@ export function audienceFor(summary: RetentionSummary, audience: string): Retent
         .sort((a, b) => b.totalSpentCents - a.totalSpentCents)
         .slice(0, 10);
     case "aniversariantes":
-      return [];
+      // Por enquanto sempre o mes corrente — e o periodo pedido nesta etapa.
+      return birthdaysIn(summary.customers, now.getMonth());
     default:
       return summary.customers;
   }

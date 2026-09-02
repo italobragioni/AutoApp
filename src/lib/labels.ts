@@ -33,8 +33,14 @@ export const WORK_ORDER_STATUS: Record<string, { label: string; tone: Tone }> = 
 export const CAMPAIGN_STATUS: Record<string, { label: string; tone: Tone }> = {
   rascunho: { label: "Rascunho", tone: "muted" },
   agendada: { label: "Agendada", tone: "info" },
-  enviada: { label: "Enviada", tone: "success" },
+  // "enviada" e o estado ativo: a campanha ja saiu e ainda esta acumulando
+  // respostas e conversoes dentro da janela de atribuicao.
+  enviada: { label: "Em andamento", tone: "volt" },
   pausada: { label: "Pausada", tone: "warning" },
+  // O campo status e String livre; estes dois entram no mesmo conjunto, sem
+  // criar uma segunda estrutura de status.
+  concluida: { label: "Concluída", tone: "success" },
+  arquivada: { label: "Arquivada", tone: "muted" },
 };
 
 export const SERVICE_CATEGORY: Record<string, string> = {

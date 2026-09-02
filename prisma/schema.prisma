@@ -38,35 +38,39 @@ model User {
 }
 
 model Company {
-  id                  String   @id @default(cuid())
-  name                String
-  slug                String   @unique
-  document            String? // CNPJ
-  phone               String?
-  email               String?
-  city                String?
-  state               String?
-  address             String?
-  logoUrl             String?
-  plan                String   @default("trial") // trial | starter | pro
+  id                    String   @id @default(cuid())
+  name                  String
+  slug                  String   @unique
+  document              String? // CNPJ
+  phone                 String?
+  email                 String?
+  city                  String?
+  state                 String?
+  address               String?
+  logoUrl               String?
+  plan                  String   @default("trial") // trial | starter | pro
   // Regras de negocio usadas pelo motor de retencao
-  retentionWindowDays Int      @default(90) // ciclo ideal de retorno do cliente
-  inactiveAfterDays   Int      @default(180) // a partir daqui o cliente e "inativo"
+  retentionWindowDays   Int      @default(90) // ciclo ideal de retorno do cliente
+  inactiveAfterDays     Int      @default(180) // a partir daqui o cliente e "inativo"
   // Depois de um contato registrado, por quantos dias o cliente sai da fila de
   // prioridade. NAO altera o estagio de retencao dele — so a ordem da fila.
-  contactCooldownDays Int      @default(7)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  contactCooldownDays   Int      @default(7)
+  // Janela de atribuicao das campanhas: por quantos dias depois do envio uma OS
+  // concluida ainda conta como conversao daquela campanha.
+  attributionWindowDays Int      @default(30)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
-  memberships  Membership[]
-  customers    Customer[]
-  vehicles     Vehicle[]
-  serviceItems ServiceItem[]
-  appointments Appointment[]
-  quotes       Quote[]
-  workOrders   WorkOrder[]
-  campaigns    Campaign[]
-  contactLogs  ContactLog[]
+  memberships          Membership[]
+  customers            Customer[]
+  vehicles             Vehicle[]
+  serviceItems         ServiceItem[]
+  appointments         Appointment[]
+  quotes               Quote[]
+  workOrders           WorkOrder[]
+  campaigns            Campaign[]
+  contactLogs          ContactLog[]
+  campaignParticipants CampaignParticipant[]
 
   @@map("companies")
 }
@@ -104,12 +108,13 @@ model Customer {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  vehicles     Vehicle[]
-  appointments Appointment[]
-  quotes       Quote[]
-  workOrders   WorkOrder[]
-  contactLogs  ContactLog[]
+  company              Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  vehicles             Vehicle[]
+  appointments         Appointment[]
+  quotes               Quote[]
+  workOrders           WorkOrder[]
+  contactLogs          ContactLog[]
+  campaignParticipants CampaignParticipant[]
 
   @@index([companyId, name])
   @@map("customers")
@@ -267,12 +272,13 @@ model WorkOrder {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  company     Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  customer    Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  vehicle     Vehicle?        @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
-  quote       Quote?          @relation(fields: [quoteId], references: [id], onDelete: SetNull)
-  appointment Appointment?    @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
-  items       WorkOrderItem[]
+  company             Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer            Customer             @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  vehicle             Vehicle?             @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  quote               Quote?               @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  appointment         Appointment?         @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  items               WorkOrderItem[]
+  campaignParticipant CampaignParticipant?
 
   @@unique([companyId, number])
   @@index([companyId, status])
@@ -345,8 +351,54 @@ model Campaign {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company      Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  participants CampaignParticipant[]
 
   @@index([companyId, status])
   @@map("campaigns")
+}
+
+// Quem recebeu (ou vai receber) uma campanha.
+//
+// E o snapshot do publico no momento em que a campanha foi criada: o estagio de
+// retencao fica congelado aqui, entao o participante continua na campanha mesmo
+// que o motor de retencao reclassifique o cliente depois.
+//
+// Tambem e a fonte unica das metricas da campanha. Os contadores em Campaign
+// (sentCount, answeredCount, convertedCount, revenueCents) sao apenas uma
+// projecao recalculada a partir destas linhas — nenhum deles e digitado a mao.
+model CampaignParticipant {
+  id         String    @id @default(cuid())
+  campaignId String
+  companyId  String
+  customerId String
+  // Estagio de retencao do cliente quando o snapshot foi tirado.
+  stage      String
+  // pendente | enviado | nao_enviado | respondeu | sem_resposta
+  status     String    @default("pendente")
+  // Quando a mensagem foi de fato marcada como enviada para ESTE cliente.
+  // E o marco que abre a janela de atribuicao.
+  sentAt     DateTime?
+
+  // Conversao atribuida. Gravada uma vez e preservada: relatorio nao muda
+  // retroativamente. O @unique garante que uma mesma OS nunca gere receita em
+  // duas campanhas — a duplicacao e impossivel no banco, nao apenas checada.
+  workOrderId  String?   @unique
+  convertedAt  DateTime?
+  revenueCents Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  campaign  Campaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer  Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  workOrder WorkOrder? @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
+
+  // Um cliente entra uma unica vez em cada campanha: nao ha como contar a mesma
+  // conversao duas vezes dentro da campanha.
+  @@unique([campaignId, customerId])
+  @@index([companyId, customerId])
+  @@index([campaignId, status])
+  @@map("campaign_participants")
 }

@@ -76,6 +76,13 @@ const retentionSchema = z.object({
     .int()
     .min(1, "O cooldown mínimo é de 1 dia.")
     .max(90, "O cooldown máximo é de 90 dias."),
+  // Configuracao central da janela de atribuicao das campanhas
+  // (src/lib/campaigns.ts).
+  attributionWindowDays: z
+    .number()
+    .int()
+    .min(1, "A janela mínima de atribuição é de 1 dia.")
+    .max(180, "A janela máxima de atribuição é de 180 dias."),
 });
 
 export async function updateRetentionAction(
@@ -91,6 +98,7 @@ export async function updateRetentionAction(
     retentionWindowDays: Number(formData.get("retentionWindowDays")),
     inactiveAfterDays: Number(formData.get("inactiveAfterDays")),
     contactCooldownDays: Number(formData.get("contactCooldownDays")),
+    attributionWindowDays: Number(formData.get("attributionWindowDays")),
   });
 
   if (!parsed.success) {

@@ -22,6 +22,7 @@
     "test:ordens": "node scripts/test-ordens.mjs",
     "test:orcamentos": "node scripts/test-orcamentos.mjs",
     "test:retencao": "node scripts/test-retencao.mjs",
+    "test:campanhas": "node scripts/test-campanhas.mjs",
     "test:mobile": "node scripts/test-mobile-forms.mjs"
   },
   "dependencies": {
