@@ -19,17 +19,21 @@ import { daysBetween, dateFull, money } from "@/lib/format";
 import { QUOTE_STATUS, statusOf } from "@/lib/labels";
 import { requireContext } from "@/lib/tenant";
 
+import { QuoteForm } from "./QuoteForm";
+
 export const metadata: Metadata = { title: "Orçamentos" };
 
-const FUNNEL = ["rascunho", "enviado", "aprovado", "recusado", "expirado"] as const;
+const FUNNEL = ["rascunho", "enviado", "aprovado", "recusado", "expirado", "cancelado"] as const;
 
 export default async function QuotesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; novo?: string; excluido?: string }>;
 }) {
   const { company } = await requireContext();
-  const statusFilter = (await searchParams).status ?? "";
+  const params = await searchParams;
+  const statusFilter = params.status ?? "";
+  const creating = params.novo === "1";
 
   const quotes = await db.quote.findMany({
     where: {
@@ -59,8 +63,41 @@ export default async function QuotesPage({
   const conversion =
     decided.length > 0 ? Math.round((approved.length / decided.length) * 100) : 0;
 
+  // Opcoes do formulario — sempre escopadas pela empresa da sessao.
+  const [customerRows, serviceRows] = await Promise.all([
+    db.customer.findMany({
+      where: { companyId: company.id, vehicles: { some: {} } },
+      select: {
+        id: true,
+        name: true,
+        vehicles: { select: { id: true, brand: true, model: true, plate: true } },
+      },
+      orderBy: { name: "asc" },
+    }),
+    db.serviceItem.findMany({
+      where: { companyId: company.id, active: true },
+      select: { id: true, name: true, basePrice: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
+  const customerOptions = customerRows.map((customer) => ({
+    id: customer.id,
+    name: customer.name,
+    vehicles: customer.vehicles.map((v) => ({
+      id: v.id,
+      label: `${v.brand} ${v.model}${v.plate ? ` · ${v.plate}` : ""}`,
+    })),
+  }));
+
   return (
     <div className="space-y-6">
+      <QuoteForm
+        open={creating}
+        customers={customerOptions}
+        services={serviceRows}
+        closeHref="/orcamentos"
+      />
+
       <PageHeader
         eyebrow="Operação"
         title="Orçamentos"
@@ -72,6 +109,16 @@ export default async function QuotesPage({
           </ButtonLink>
         }
       />
+
+      {params.excluido === "1" && (
+        <p
+          role="status"
+          className="flex items-center gap-2 rounded-xl border border-volt-400/25 bg-volt-400/10 px-3.5 py-3 text-sm text-volt-200"
+        >
+          <CheckCircle2 size={15} className="shrink-0" />
+          Orçamento excluído.
+        </p>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
@@ -173,8 +220,13 @@ export default async function QuotesPage({
                   : null;
                 return (
                   <Tr key={quote.id}>
-                    <Td className="font-display text-xs font-bold text-muted">
-                      #{String(quote.number).padStart(4, "0")}
+                    <Td>
+                      <Link
+                        href={`/orcamentos/${quote.id}`}
+                        className="focus-ring rounded font-display text-xs font-bold text-volt-400 hover:text-volt-300"
+                      >
+                        #{String(quote.number).padStart(4, "0")}
+                      </Link>
                     </Td>
                     <Td>
                       <Link

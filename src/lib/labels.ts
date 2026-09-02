@@ -17,6 +17,9 @@ export const QUOTE_STATUS: Record<string, { label: string; tone: Tone }> = {
   aprovado: { label: "Aprovado", tone: "success" },
   recusado: { label: "Recusado", tone: "danger" },
   expirado: { label: "Expirado", tone: "warning" },
+  // O campo status e String livre; "cancelado" entra no mesmo conjunto, sem
+  // criar uma segunda estrutura de status.
+  cancelado: { label: "Cancelado", tone: "muted" },
 };
 
 export const WORK_ORDER_STATUS: Record<string, { label: string; tone: Tone }> = {

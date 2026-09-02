@@ -207,7 +207,7 @@ model Quote {
   number        Int
   customerId    String
   vehicleId     String?
-  status        String    @default("rascunho") // rascunho | enviado | aprovado | recusado | expirado
+  status        String    @default("rascunho") // rascunho | enviado | aprovado | recusado | expirado | cancelado
   validUntil    DateTime?
   discountCents Int       @default(0)
   totalCents    Int       @default(0)
@@ -247,7 +247,10 @@ model WorkOrder {
   number        Int
   customerId    String
   vehicleId     String?
-  quoteId       String?
+  // @unique: um orcamento gera no maximo UMA ordem de servico. Mesma protecao
+  // que appointmentId ja tinha — a duplicacao passa a ser impossivel no banco,
+  // nao apenas checada na aplicacao.
+  quoteId       String?   @unique
   appointmentId String?   @unique
   status        String    @default("aberta") // aberta | em_andamento | aguardando_retirada | concluida | cancelada
   paymentMethod String? // pix | dinheiro | credito | debito | link
