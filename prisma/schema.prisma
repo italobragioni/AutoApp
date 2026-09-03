@@ -23,20 +23,52 @@ datasource db {
 // ---------------------------------------------------------------------------
 
 model User {
-  id           String   @id @default(cuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  avatarColor  String   @default("#12E29B")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                String    @id @default(cuid())
+  name              String
+  email             String    @unique
+  passwordHash      String
+  avatarColor       String    @default("#12E29B")
+  // Nulo = e-mail ainda nao confirmado. Nao bloqueia o uso da plataforma.
+  emailVerifiedAt   DateTime?
+  // Corte de sessoes: um cookie assinado ANTES deste instante deixa de valer.
+  // E assim que trocar a senha derruba as sessoes antigas sem precisar guardar
+  // sessao no banco — a arquitetura continua com JWT sem estado.
+  sessionsValidFrom DateTime  @default(now())
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   memberships     Membership[]
   contactLogs     ContactLog[]
   invitesSent     Invitation[] @relation("InvitationCreatedBy")
   invitesAccepted Invitation[] @relation("InvitationAcceptedBy")
+  authTokens      AuthToken[]
 
   @@map("users")
+}
+
+// Token de uso unico para recuperacao de senha e verificacao de e-mail.
+//
+// Uma tabela so para os dois casos: mudam o proposito e o prazo, nao a
+// mecanica. O que vai no link NUNCA e gravado — a coluna guarda o SHA-256 dele,
+// entao um vazamento do banco nao entrega nenhum link utilizavel.
+model AuthToken {
+  id        String    @id @default(cuid())
+  userId    String
+  // recuperacao | verificacao
+  purpose   String
+  // SHA-256 (hex) do token enviado no link. Unico: a busca e feita por ele.
+  tokenHash String    @unique
+  expiresAt DateTime
+  // Preenchido no primeiro uso. E o que impede a reutilizacao.
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // O indice serve ao limite de pedidos: quantos deste usuario e proposito
+  // foram criados nos ultimos minutos.
+  @@index([userId, purpose, createdAt])
+  @@map("auth_tokens")
 }
 
 model Company {

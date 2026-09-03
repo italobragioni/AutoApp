@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { sendVerificationEmail } from "@/app/actions/account";
 import { db } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { createSessionCookie, destroySessionCookie, readSession } from "@/lib/session";
@@ -100,6 +101,10 @@ export async function registerAction(_state: FormState, formData: FormData): Pro
   if (withDemo) {
     await seedDemoDataForCompany(companyId);
   }
+
+  // O e-mail comeca nao verificado: o link sai agora e a plataforma continua
+  // liberada enquanto isso.
+  await sendVerificationEmail(user.id);
 
   await createSessionCookie({ userId: user.id, companyId });
   redirect("/dashboard");

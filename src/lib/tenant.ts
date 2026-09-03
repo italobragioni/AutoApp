@@ -7,7 +7,14 @@ import { db } from "@/lib/db";
 import { readSession } from "@/lib/session";
 
 export type CurrentContext = {
-  user: { id: string; name: string; email: string; avatarColor: string };
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    avatarColor: string;
+    /** Nulo enquanto o e-mail nao for confirmado. Nao bloqueia o uso. */
+    emailVerifiedAt: Date | null;
+  };
   company: {
     id: string;
     name: string;
@@ -46,6 +53,15 @@ export const getCurrentContext = cache(async (): Promise<CurrentContext | null> 
   });
   if (!membership) return null;
 
+  // Corte de sessao: trocar a senha empurra `sessionsValidFrom` para agora, e
+  // todo cookie assinado antes disso para de valer aqui.
+  //
+  // A comparacao usa segundos porque o `iat` do JWT so tem essa precisao —
+  // arredondar para baixo evita que a sessao criada no mesmo segundo do corte
+  // seja recusada junto com as antigas.
+  const cutoff = Math.floor(membership.user.sessionsValidFrom.getTime() / 1000);
+  if (session.issuedAt !== undefined && session.issuedAt < cutoff) return null;
+
   const memberships = await db.membership.findMany({
     where: { userId: session.userId },
     include: { company: { select: { id: true, name: true, slug: true } } },
@@ -60,6 +76,7 @@ export const getCurrentContext = cache(async (): Promise<CurrentContext | null> 
       name: user.name,
       email: user.email,
       avatarColor: user.avatarColor,
+      emailVerifiedAt: user.emailVerifiedAt,
     },
     company: {
       id: company.id,

@@ -10,6 +10,14 @@ export type SessionPayload = {
   userId: string;
   /** Empresa ativa. Toda query da aplicacao e escopada por este id. */
   companyId: string;
+  /**
+   * Quando o cookie foi assinado, em segundos (o `iat` do JWT).
+   *
+   * E o que permite derrubar sessoes antigas sem guardar sessao no banco:
+   * `User.sessionsValidFrom` marca o corte, e um cookie assinado antes dele
+   * deixa de valer (ver src/lib/tenant.ts).
+   */
+  issuedAt?: number;
 };
 
 function secret() {
@@ -23,7 +31,9 @@ function secret() {
 }
 
 export async function signSession(payload: SessionPayload) {
-  return new SignJWT({ ...payload })
+  // `issuedAt` nao vai no corpo: quem o define e o proprio `setIssuedAt()`.
+  const { issuedAt: _ignored, ...claims } = payload;
+  return new SignJWT({ ...claims })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setIssuer("autovolt")
@@ -37,7 +47,11 @@ export async function verifySession(token: string): Promise<SessionPayload | nul
     if (typeof payload.userId !== "string" || typeof payload.companyId !== "string") {
       return null;
     }
-    return { userId: payload.userId, companyId: payload.companyId };
+    return {
+      userId: payload.userId,
+      companyId: payload.companyId,
+      issuedAt: typeof payload.iat === "number" ? payload.iat : undefined,
+    };
   } catch {
     return null;
   }

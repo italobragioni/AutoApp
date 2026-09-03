@@ -1,6 +1,7 @@
 import { MobileNav } from "@/components/nav/MobileNav";
 import { Sidebar } from "@/components/nav/Sidebar";
 import { Topbar } from "@/components/nav/Topbar";
+import { VerifyEmailNotice } from "@/components/nav/VerifyEmailNotice";
 import { allowedHrefs } from "@/lib/navigation";
 import { can } from "@/lib/permissions";
 import { getRetention } from "@/lib/retention";
@@ -24,6 +25,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
       <div className="lg:pl-64">
         <Topbar context={context} />
+        {/* Informa, mas não bloqueia: o e-mail pendente não impede o uso. */}
+        {!context.user.emailVerifiedAt && <VerifyEmailNotice email={context.user.email} />}
         <main className="glow-top mx-auto w-full max-w-[92rem] px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-12">
           {children}
         </main>

@@ -91,6 +91,7 @@ async function reset() {
   await db.appointment.deleteMany();
   await db.workOrder.deleteMany();
   await db.quote.deleteMany();
+  await db.authToken.deleteMany();
   await db.campaign.deleteMany();
   await db.serviceItem.deleteMany();
   await db.vehicle.deleteMany();
@@ -142,6 +143,7 @@ async function main() {
       email: DEMO_EMAIL,
       passwordHash,
       avatarColor: "#12E29B",
+      emailVerifiedAt: new Date(),
       memberships: {
         create: [
           { companyId: primary.id, role: "owner" },
@@ -160,6 +162,7 @@ async function main() {
       email: "taina.ribeiro@garage77.com.br",
       passwordHash,
       avatarColor: "#38BDF8",
+      emailVerifiedAt: new Date(),
       memberships: { create: [{ companyId: primary.id, role: "manager" }] },
     },
   });
@@ -170,6 +173,7 @@ async function main() {
       email: "diego.nakamura@garage77.com.br",
       passwordHash,
       avatarColor: "#FBBF24",
+      emailVerifiedAt: new Date(),
       memberships: { create: [{ companyId: primary.id, role: "staff" }] },
     },
   });

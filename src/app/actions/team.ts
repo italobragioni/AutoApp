@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { sendVerificationEmail } from "@/app/actions/account";
 import { permit } from "@/lib/authorize";
 import { db } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/password";
@@ -264,6 +265,10 @@ export async function acceptInvitationAction(
       select: { id: true },
     });
     userId = created.id;
+
+    // Receber o link de convite nao prova o e-mail: ele pode ter sido repassado
+    // por qualquer meio. A conta nova segue o mesmo caminho do cadastro.
+    await sendVerificationEmail(created.id);
   }
 
   if (!userId) return { error: "Não foi possível validar o convite." };
