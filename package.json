@@ -25,6 +25,7 @@
     "test:campanhas": "node scripts/test-campanhas.mjs",
     "test:equipe": "node scripts/test-equipe.mjs",
     "test:seguranca": "node scripts/test-seguranca.mjs",
+    "test:relatorios": "node scripts/test-relatorios.mjs",
     "test:mobile": "node scripts/test-mobile-forms.mjs"
   },
   "dependencies": {

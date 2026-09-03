@@ -40,7 +40,7 @@ export function StatCard({
 }: {
   label: string;
   value: ReactNode;
-  hint?: string;
+  hint?: ReactNode;
   /** Variacao percentual vs. periodo anterior. */
   delta?: number | null;
   icon?: ReactNode;
