@@ -63,7 +63,6 @@ export function RegisterForm() {
         <input
           type="checkbox"
           name="demo"
-          defaultChecked
           className="mt-0.5 size-4 shrink-0 accent-volt-400"
         />
         <span className="text-xs leading-relaxed text-muted">
