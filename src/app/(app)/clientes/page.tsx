@@ -176,7 +176,11 @@ export default async function CustomersPage({
                 <ButtonLink href="/clientes" size="sm" variant="secondary">
                   Limpar busca
                 </ButtonLink>
-              ) : undefined
+              ) : (
+                <ButtonLink href="/clientes?novo=1" size="sm">
+                  Novo cliente
+                </ButtonLink>
+              )
             }
           />
         ) : (

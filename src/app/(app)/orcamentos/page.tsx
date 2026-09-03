@@ -199,6 +199,11 @@ export default async function QuotesPage({
             icon={<FileText size={20} />}
             title="Nenhum orçamento"
             description="Crie propostas a partir do catálogo de serviços e acompanhe a aprovação aqui."
+            action={
+              <ButtonLink href="/orcamentos?novo=1" size="sm">
+                Novo orçamento
+              </ButtonLink>
+            }
           />
         ) : (
           <Table>

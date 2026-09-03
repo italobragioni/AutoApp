@@ -154,7 +154,11 @@ export default async function VehiclesPage({
                 <ButtonLink href="/veiculos" size="sm" variant="secondary">
                   Limpar busca
                 </ButtonLink>
-              ) : undefined
+              ) : (
+                <ButtonLink href="/veiculos?novo=1" size="sm">
+                  Novo veículo
+                </ButtonLink>
+              )
             }
           />
         ) : (

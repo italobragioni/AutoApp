@@ -72,9 +72,9 @@ model AuthToken {
 }
 
 model Company {
-  id                    String   @id @default(cuid())
+  id                    String    @id @default(cuid())
   name                  String
-  slug                  String   @unique
+  slug                  String    @unique
   document              String? // CNPJ
   phone                 String?
   email                 String?
@@ -82,18 +82,22 @@ model Company {
   state                 String?
   address               String?
   logoUrl               String?
-  plan                  String   @default("trial") // trial | starter | pro
+  plan                  String    @default("trial") // trial | starter | pro
   // Regras de negocio usadas pelo motor de retencao
-  retentionWindowDays   Int      @default(90) // ciclo ideal de retorno do cliente
-  inactiveAfterDays     Int      @default(180) // a partir daqui o cliente e "inativo"
+  retentionWindowDays   Int       @default(90) // ciclo ideal de retorno do cliente
+  inactiveAfterDays     Int       @default(180) // a partir daqui o cliente e "inativo"
   // Depois de um contato registrado, por quantos dias o cliente sai da fila de
   // prioridade. NAO altera o estagio de retencao dele — so a ordem da fila.
-  contactCooldownDays   Int      @default(7)
+  contactCooldownDays   Int       @default(7)
   // Janela de atribuicao das campanhas: por quantos dias depois do envio uma OS
   // concluida ainda conta como conversao daquela campanha.
-  attributionWindowDays Int      @default(30)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  attributionWindowDays Int       @default(30)
+  // Quando o usuario dispensou o guia de primeiros passos. Isto NAO indica que
+  // as etapas foram concluidas — a conclusao vem sempre dos dados reais. E so
+  // uma preferencia: esconder o card. Nulo = nunca dispensado.
+  onboardingDismissedAt DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   memberships          Membership[]
   customers            Customer[]

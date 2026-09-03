@@ -27,6 +27,7 @@
     "test:seguranca": "node scripts/test-seguranca.mjs",
     "test:relatorios": "node scripts/test-relatorios.mjs",
     "test:responsivo": "node scripts/test-responsivo.mjs",
+    "test:onboarding": "node scripts/test-onboarding.mjs",
     "test:mobile": "node scripts/test-mobile-forms.mjs"
   },
   "dependencies": {

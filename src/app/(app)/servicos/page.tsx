@@ -124,6 +124,13 @@ export default async function ServicesPage({
             icon={<Sparkles size={20} />}
             title="Catálogo vazio"
             description="Cadastre seus serviços com preço, duração e ciclo de recorrência para começar."
+            action={
+              canManage ? (
+                <ButtonLink href="/servicos?novo=1" size="sm">
+                  Novo serviço
+                </ButtonLink>
+              ) : undefined
+            }
           />
         </Card>
       ) : (

@@ -14,6 +14,7 @@ import { LineChart } from "@/components/charts";
 import { Badge, Card, CardBody, CardHeader, ButtonLink, EmptyState } from "@/components/ui";
 import { OpportunityBanner, PageHeader, StatCard } from "@/components/ui/page";
 import { attachContacts } from "@/lib/contacts";
+import { getOnboarding, canDoStep } from "@/lib/onboarding";
 import { can } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import { dateFull, money, moneyCompact, phoneMask, samePeriodHint, time, whatsappLink } from "@/lib/format";
@@ -22,11 +23,28 @@ import { endOfDay, getDashboardMetrics, revenueByMonth, startOfDay } from "@/lib
 import { STAGE_LABEL, getRetention } from "@/lib/retention";
 import { requireContext } from "@/lib/tenant";
 
+import { OnboardingCard } from "./OnboardingCard";
+
 export const metadata: Metadata = { title: "Dashboard" };
 
 export default async function DashboardPage() {
-  const { company, user, role } = await requireContext();
+  const context = await requireContext();
+  const { company, user, role } = context;
   const companyId = company.id;
+
+  // Guia de primeiros passos: progresso vem do banco (getOnboarding), e o card
+  // some quando dispensado. As etapas ganham `allowed` conforme o papel — o
+  // progresso independe disso.
+  const onboarding = await getOnboarding(context);
+  const showOnboarding = !onboarding.dismissed;
+  const onboardingSteps = onboarding.steps.map((step) => ({
+    key: step.key,
+    title: step.title,
+    description: step.description,
+    done: step.done,
+    href: step.href,
+    allowed: canDoStep(role, step),
+  }));
 
   // Faturamento, ticket medio e o grafico de receita so aparecem para quem tem
   // reports.finance. A operacao do dia (agenda, OS, retencao) continua visivel
@@ -94,6 +112,15 @@ export default async function DashboardPage() {
           </>
         }
       />
+
+      {showOnboarding && (
+        <OnboardingCard
+          steps={onboardingSteps}
+          doneCount={onboarding.doneCount}
+          total={onboarding.total}
+          complete={onboarding.complete}
+        />
+      )}
 
       {/* A promessa do produto, transformada em número */}
       {retention.opportunityCents > 0 && (

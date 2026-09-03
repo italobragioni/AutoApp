@@ -176,6 +176,11 @@ export default async function CampaignsPage({
             icon={<Megaphone size={20} />}
             title="Nenhuma campanha criada"
             description="Crie uma campanha para um dos públicos acima e traga clientes antigos de volta."
+            action={
+              <ButtonLink href="/campanhas?nova=1" size="sm">
+                Nova campanha
+              </ButtonLink>
+            }
           />
         </Card>
       ) : (
