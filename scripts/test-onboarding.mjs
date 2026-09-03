@@ -78,9 +78,7 @@ await p.fill('input[name="name"]', `Dono ${TAG}`);
 await p.fill('input[name="companyName"]', `Estética ${TAG}`);
 await p.fill('input[name="email"]', EMAIL);
 await p.fill('input[name="password"]', SENHA);
-// Desmarca "popular com dados de demonstração": o onboarding precisa de uma
-// empresa realmente vazia. (O checkbox é opt-in e vem marcado por padrão.)
-await p.uncheck('input[name="demo"]').catch(() => {});
+// A empresa nasce vazia — não há mais opção de dados de demonstração.
 await p.click('button[type="submit"]');
 await p.waitForURL("**/dashboard", { timeout: 20000 });
 

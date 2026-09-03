@@ -8,7 +8,6 @@ import { sendVerificationEmail } from "@/app/actions/account";
 import { db } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { createSessionCookie, destroySessionCookie, readSession } from "@/lib/session";
-import { seedDemoDataForCompany } from "@/lib/demo-data";
 import { slugify } from "@/lib/slug";
 
 export type FormState = { error?: string } | undefined;
@@ -72,8 +71,6 @@ export async function registerAction(_state: FormState, formData: FormData): Pro
     return { error: "Já existe uma conta com esse e-mail." };
   }
 
-  const withDemo = String(formData.get("demo") ?? "") === "on";
-
   // Garante slug unico para a nova empresa.
   const base = slugify(parsed.data.companyName) || "empresa";
   let slug = base;
@@ -98,9 +95,9 @@ export async function registerAction(_state: FormState, formData: FormData): Pro
   });
 
   const companyId = user.memberships[0].companyId;
-  if (withDemo) {
-    await seedDemoDataForCompany(companyId);
-  }
+
+  // A empresa nasce vazia: sem dados de demonstracao. O onboarding no Dashboard
+  // guia os primeiros cadastros reais.
 
   // O e-mail comeca nao verificado: o link sai agora e a plataforma continua
   // liberada enquanto isso.

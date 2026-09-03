@@ -59,19 +59,6 @@ export function RegisterForm() {
         />
       </Field>
 
-      <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-line bg-ink-900 px-3.5 py-3">
-        <input
-          type="checkbox"
-          name="demo"
-          className="mt-0.5 size-4 shrink-0 accent-volt-400"
-        />
-        <span className="text-xs leading-relaxed text-muted">
-          <span className="font-medium text-soft">Popular com dados de demonstração.</span> Cria
-          clientes, veículos, agenda e histórico fictícios para você conhecer a plataforma. Pode
-          apagar depois em Configurações.
-        </span>
-      </label>
-
       <Submit />
     </form>
   );
