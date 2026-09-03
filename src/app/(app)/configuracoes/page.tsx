@@ -79,7 +79,7 @@ export default async function SettingsPage() {
       />
 
       <div className="grid gap-5 lg:grid-cols-3">
-        <div className="space-y-5 lg:col-span-2">
+        <div className="min-w-0 space-y-5 lg:col-span-2">
           {/* Dados da empresa e regras: so para quem tem company.settings. */}
           {canEdit ? (
             <>
@@ -151,7 +151,7 @@ export default async function SettingsPage() {
           </Card>
         </div>
 
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5">
           <Card>
             <CardHeader title="Suas empresas" description="Alterne pelo seletor no topo." />
             <ul className="divide-y divide-line">

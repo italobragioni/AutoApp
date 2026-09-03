@@ -217,8 +217,10 @@ export default async function AgendaPage({
         </Link>
       </div>
 
-      {/* Grade semanal */}
-      <div className="grid gap-3 lg:grid-cols-7">
+      {/* Grade semanal — só no desktop. No celular a semana inteira empilhada
+          em 7 cartões viraria um scroll enorme e redundante com a lista
+          cronológica abaixo, que passa a ser a visão de agenda no mobile. */}
+      <div className="hidden gap-3 lg:grid lg:grid-cols-7">
         {days.map((day) => {
           const isToday = isoDate(day.date) === todayIso;
           return (

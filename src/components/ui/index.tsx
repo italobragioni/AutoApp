@@ -12,8 +12,13 @@ export function Card({
   children,
   ...props
 }: ComponentProps<"div">) {
+  // min-w-0: quando o Card e item de um grid/flex, `min-width: auto` (o padrao)
+  // o impediria de encolher abaixo do min-content do conteudo — uma tabela larga
+  // ou um texto longo esticariam o card para alem da coluna e a pagina inteira
+  // ganharia scroll horizontal no celular. Com min-w-0 o card respeita a track e
+  // o conteudo encolhe, quebra ou rola dentro dele.
   return (
-    <div className={cn("surface", className)} {...props}>
+    <div className={cn("surface min-w-0", className)} {...props}>
       {children}
     </div>
   );
@@ -41,7 +46,10 @@ export function CardHeader({
         <h3 className="text-sm font-semibold text-white">{title}</h3>
         {description && <p className="mt-1 text-xs text-muted">{description}</p>}
       </div>
-      {action && <div className="shrink-0">{action}</div>}
+      {/* max-w-full: uma acao larga (ex.: faixa de filtros) fica presa a largura
+          do cabecalho e pode rolar/quebrar dentro dela, em vez de esticar o card
+          no celular. */}
+      {action && <div className="min-w-0 max-w-full shrink-0">{action}</div>}
     </div>
   );
 }
@@ -204,8 +212,12 @@ export function Select({ className, children, ...props }: ComponentProps<"select
 /* -------------------------------------------------------------------------- */
 
 export function Table({ className, children, ...props }: ComponentProps<"table">) {
+  // min-w-0: o container rola a tabela internamente, mas como item de grid/flex
+  // ele herdaria `min-width: auto` e se esticaria ate o min-w-[42rem] da tabela,
+  // empurrando a pagina. Com min-w-0 ele respeita a largura disponivel e o
+  // scroll acontece dentro dele, no celular.
   return (
-    <div className="w-full overflow-x-auto">
+    <div className="w-full min-w-0 overflow-x-auto">
       <table className={cn("w-full min-w-[42rem] text-sm", className)} {...props}>
         {children}
       </table>

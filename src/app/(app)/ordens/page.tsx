@@ -178,10 +178,12 @@ export default async function WorkOrdersPage({
           title={statusFilter ? `OS: ${statusOf(WORK_ORDER_STATUS, statusFilter).label}` : "Histórico de ordens"}
           description={`${orders.length} ${orders.length === 1 ? "registro" : "registros"} mais recentes.`}
           action={
-            <div className="flex flex-wrap gap-1.5">
+            // Faixa de filtros: no celular rola na horizontal dentro do card
+            // (os chips nao encolhem); no desktop quebra em linhas.
+            <div className="-mb-1 flex gap-1.5 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
               <Link
                 href="/ordens"
-                className={`focus-ring rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                className={`focus-ring shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                   !statusFilter ? "bg-volt-400 text-ink-950" : "border border-line text-soft hover:text-white"
                 }`}
               >
@@ -191,7 +193,7 @@ export default async function WorkOrdersPage({
                 <Link
                   key={key}
                   href={`/ordens?status=${key}`}
-                  className={`focus-ring rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  className={`focus-ring shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                     statusFilter === key
                       ? "bg-volt-400 text-ink-950"
                       : "border border-line text-soft hover:text-white"
