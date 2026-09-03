@@ -103,13 +103,9 @@ export default function LandingPage() {
               <ArrowRight size={16} />
             </ButtonLink>
             <ButtonLink href="/login" variant="secondary" size="lg">
-              Ver demonstração
+              Entrar
             </ButtonLink>
           </div>
-
-          <p className="mt-5 text-xs text-muted">
-            Acesso de demonstração já preenchido na tela de login.
-          </p>
         </div>
       </section>
 
@@ -228,7 +224,7 @@ export default function LandingPage() {
                   Comece em poucos minutos
                 </p>
                 <p className="mt-2 text-sm text-muted">
-                  Crie sua conta e explore com dados de demonstração já prontos.
+                  Crie sua conta e comece a organizar sua estética hoje.
                 </p>
                 <ButtonLink href="/cadastro" size="lg" className="mt-7 w-full">
                   Criar conta grátis

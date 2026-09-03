@@ -46,7 +46,6 @@ export function LoginForm({ senhaRedefinida = false }: { senhaRedefinida?: boole
           autoComplete="email"
           required
           placeholder="voce@suaempresa.com.br"
-          defaultValue="demo@autovolt.com.br"
         />
       </Field>
 
@@ -57,7 +56,6 @@ export function LoginForm({ senhaRedefinida = false }: { senhaRedefinida?: boole
           autoComplete="current-password"
           required
           placeholder="••••••••"
-          defaultValue="autovolt123"
         />
       </Field>
 
@@ -71,12 +69,6 @@ export function LoginForm({ senhaRedefinida = false }: { senhaRedefinida?: boole
       </div>
 
       <Submit />
-
-      <p className="rounded-xl border border-line bg-ink-900 px-3.5 py-3 text-xs leading-relaxed text-muted">
-        <span className="font-medium text-soft">Acesso de demonstração</span> já preenchido:
-        <br />
-        demo@autovolt.com.br · autovolt123
-      </p>
     </form>
   );
 }
