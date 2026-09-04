@@ -78,13 +78,42 @@ export async function getSubscription(companyId: string) {
   return db.subscription.findUnique({ where: { companyId } });
 }
 
-/** Atalho: a empresa tem acesso operacional agora? Uma consulta so. */
+/**
+ * Contas isentas de assinatura.
+ *
+ * Lidas de BILLING_EXEMPT_EMAILS (e-mails separados por vírgula). O padrão já
+ * inclui a conta de demonstração, para ela operar sem assinar sem precisar
+ * configurar nada. Uma empresa é isenta quando seu DONO (owner) está nessa
+ * lista — a isenção acompanha a conta, não uma empresa específica, então
+ * qualquer empresa criada por ela também funciona.
+ *
+ * É uma exceção estreita e explícita: não enfraquece o paywall de ninguém mais.
+ */
+export function exemptEmails(): string[] {
+  const raw = process.env.BILLING_EXEMPT_EMAILS ?? "demo@autovolt.com.br";
+  return raw
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+/** Atalho: a empresa tem acesso operacional agora? */
 export async function companyHasAccess(companyId: string): Promise<boolean> {
   const sub = await db.subscription.findUnique({
     where: { companyId },
     select: { status: true, currentPeriodEnd: true },
   });
-  return hasOperationalAccess(sub);
+  // Caminho normal (e rápido): assinatura ativa da empresa.
+  if (hasOperationalAccess(sub)) return true;
+
+  // Sem assinatura ativa: só libera se a empresa for de uma conta isenta.
+  const exempt = exemptEmails();
+  if (exempt.length === 0) return false;
+  const exemptOwner = await db.membership.findFirst({
+    where: { companyId, role: "owner", user: { email: { in: exempt } } },
+    select: { id: true },
+  });
+  return Boolean(exemptOwner);
 }
 
 /**

@@ -11,6 +11,7 @@
  * TESTE 8   assinatura cancelada → dados preservados
  * TESTE 9   webhook de renovação → segue ativa e período é atualizado
  * TESTE 10  build/deploy: nada é apagado, nenhum secret é exposto
+ * TESTE 11  conta demo (isenta) opera sem assinatura
  *
  * A liberação de acesso NUNCA é testada pela URL de retorno: em todos os casos a
  * verdade é conferida no banco depois de um webhook autenticado. O corpo do
@@ -340,6 +341,41 @@ try {
 } catch {
   check(true, "verificação de bundle ignorada (grep indisponível)");
 }
+
+// ---------------------------------------------------------------- TESTE 11
+console.log("\n══ TESTE 11: conta demo opera sem assinatura (isenção) ══");
+
+// Uma empresa NOVA da conta demo, sem nenhuma assinatura: só a isenção
+// (BILLING_EXEMPT_EMAILS, que por padrão inclui a conta demo) pode liberar.
+const demoUser = await db.user.findUnique({
+  where: { email: "demo@autovolt.com.br" },
+  select: { id: true },
+});
+const isenta = await db.company.create({
+  data: {
+    name: `Isenta ${TAG}`,
+    slug: `isenta-${TAG}`,
+    memberships: { create: { userId: demoUser.id, role: "owner" } },
+  },
+});
+const subIsenta = await db.subscription.findUnique({ where: { companyId: isenta.id } });
+check(!subIsenta, "a empresa isenta realmente não tem assinatura");
+
+const demoPage = await novaAba();
+await login(demoPage, BASE, "demo@autovolt.com.br", "autovolt123");
+await demoPage.goto(`${BASE}/dashboard`, { waitUntil: "networkidle" });
+await demoPage.locator("header button").first().click();
+await demoPage.waitForTimeout(300);
+await demoPage
+  .locator(`form:has(input[name="companyId"]) button:has-text("Isenta ${TAG}")`)
+  .first()
+  .click();
+await demoPage.waitForTimeout(1500);
+check(
+  demoPage.url().endsWith("/dashboard"),
+  "conta demo acessa uma empresa SEM assinatura (isenção libera o acesso)",
+);
+await demoPage.close();
 
 // ----------------------------------------------------------------
 await b.close();
