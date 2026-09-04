@@ -96,6 +96,8 @@ async function reset() {
   await db.serviceItem.deleteMany();
   await db.vehicle.deleteMany();
   await db.customer.deleteMany();
+  await db.subscription.deleteMany();
+  await db.webhookEvent.deleteMany();
   await db.membership.deleteMany();
   await db.company.deleteMany();
   await db.user.deleteMany();
@@ -177,6 +179,23 @@ async function main() {
       memberships: { create: [{ companyId: primary.id, role: "staff" }] },
     },
   });
+
+  // Assinatura ativa para as empresas de demonstração: o AUTOVOLT e pago, entao
+  // sem isto o ambiente local cairia direto na tela de assinatura. So no seed de
+  // desenvolvimento — em producao a assinatura vem sempre de um webhook da Cakto.
+  console.log("→ Ativando assinaturas de demonstração...");
+  const periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  for (const companyId of [primary.id, secondary.id]) {
+    await db.subscription.create({
+      data: {
+        companyId,
+        plan: "professional",
+        status: "active",
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: periodEnd,
+      },
+    });
+  }
 
   console.log("→ Gerando dados de demonstração...");
   await seedDemoDataForCompany(primary.id);

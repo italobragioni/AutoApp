@@ -68,6 +68,9 @@ await p.goto(`${BASE}/esqueci-senha`, { waitUntil: "networkidle" });
 await typeKeepingFocus(p, '#forgot-form input[name="email"]', "maria@teste.com", "E-mail");
 await checkFontSize(p, '#forgot-form input[name="email"]', "E-mail da recuperação");
 
+await p.goto(`${BASE}/login`, { waitUntil: "networkidle" });
+await p.fill('input[name="email"]', "demo@autovolt.com.br");
+await p.fill('input[name="password"]', "autovolt123");
 await p.click('button[type="submit"]');
 await p.waitForURL("**/dashboard");
 

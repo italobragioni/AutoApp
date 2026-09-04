@@ -61,7 +61,9 @@ async function hrefsDoMenu(page) {
 
 const dono = await novaAba("dono");
 await dono.goto(`${BASE}/login`, { waitUntil: "networkidle" });
-await dono.click('button[type="submit"]'); // formulário já vem preenchido no demo
+await dono.fill('input[name="email"]', "demo@autovolt.com.br");
+await dono.fill('input[name="password"]', "autovolt123");
+await dono.click('button[type="submit"]');
 await dono.waitForURL("**/dashboard");
 
 const empresaA = await db.company.findFirst({

@@ -110,8 +110,88 @@ model Company {
   contactLogs          ContactLog[]
   campaignParticipants CampaignParticipant[]
   invitations          Invitation[]
+  subscription         Subscription?
 
   @@map("companies")
+}
+
+// ---------------------------------------------------------------------------
+// Assinatura e pagamentos (Cakto)
+// ---------------------------------------------------------------------------
+
+// Assinatura de uma empresa.
+//
+// A assinatura pertence a COMPANY, nunca ao User: a arquitetura suporta varias
+// empresas por conta, e cada uma paga (ou nao) a sua. Uma linha por empresa
+// (companyId @unique) que evolui no tempo — nao ha historico de varias
+// assinaturas, so o estado atual, que e o minimo necessario para controlar
+// acesso.
+//
+// Quem MUDA o status e sempre o backend: uma acao autenticada (iniciar o
+// checkout cria a linha PENDENTE) ou o processamento de um webhook valido da
+// Cakto. O frontend nunca escreve status aqui.
+model Subscription {
+  id        String @id @default(cuid())
+  companyId String @unique
+  // Identificador do plano no catalogo interno (src/lib/plans.ts). Nao e o id da
+  // Cakto — esse fica em caktoProductId.
+  plan      String @default("professional")
+  // pending | active | past_due | canceled | expired (src/lib/subscription.ts)
+  status    String @default("pending")
+
+  // Dados espelhados da Cakto, preenchidos conforme os eventos chegam.
+  caktoCustomerId     String?
+  // @unique: um mesmo contrato de assinatura da Cakto pertence a UMA empresa. E
+  // por ele que as renovacoes reencontram a assinatura certa.
+  caktoSubscriptionId String? @unique
+  caktoProductId      String?
+
+  // Referencia opaca gerada pelo backend no inicio do checkout e enviada a Cakto
+  // (parametro de rastreamento). Quando o webhook volta com ela, sabemos com
+  // certeza qual empresa deve receber a assinatura — sem confiar em e-mail nem
+  // em companyId vindos do navegador.
+  checkoutRef String? @unique
+
+  // Periodo pago vigente. Nulos enquanto a Cakto nao informar — nunca inventamos
+  // datas. O acesso depende de currentPeriodEnd quando ele existe.
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  // Preenchido quando a Cakto informa cancelamento. Cancelar NAO apaga dados da
+  // empresa; so muda o controle de acesso.
+  canceledAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@map("subscriptions")
+}
+
+// Evento de webhook ja processado — a memoria que garante idempotencia.
+//
+// A Cakto pode reenviar o mesmo evento (timeout, retentativa). O externalId
+// unico impede que o mesmo evento seja aplicado duas vezes: se ja existe uma
+// linha para ele, o endpoint responde 200 e nao processa de novo. Guarda apenas
+// o necessario para auditoria — nunca o corpo com dados pessoais, nunca o
+// secret.
+model WebhookEvent {
+  id String @id @default(cuid())
+  // Chave de deduplicacao: "<evento>:<id do dado na Cakto>".
+  externalId String @unique
+  event      String
+  // processed | ignored | error
+  result String @default("processed")
+  // Para onde o evento foi aplicado, quando resolvido. So auditoria.
+  companyId String?
+  // SHA-256 do corpo cru. Permite conferir reentregas identicas sem guardar o
+  // conteudo.
+  payloadDigest String?
+  receivedAt    DateTime @default(now())
+
+  @@index([event])
+  @@map("webhook_events")
 }
 
 // Vinculo usuario <-> empresa. Um usuario pode operar varias empresas.

@@ -21,6 +21,8 @@
 import { chromium } from "playwright";
 import { PrismaClient } from "@prisma/client";
 
+import { ativarAssinatura } from "./_billing.mjs";
+
 const BASE = process.env.BASE_URL ?? "http://127.0.0.1:3000";
 const CHROME = process.env.CHROMIUM_PATH;
 const fails = [];
@@ -80,7 +82,11 @@ await p.fill('input[name="email"]', EMAIL);
 await p.fill('input[name="password"]', SENHA);
 // A empresa nasce vazia — não há mais opção de dados de demonstração.
 await p.click('button[type="submit"]');
-await p.waitForURL("**/dashboard", { timeout: 20000 });
+// O AUTOVOLT é pago: o cadastro leva à assinatura. O teste ativa a assinatura da
+// empresa (como o webhook da Cakto faria) e segue para o painel operacional.
+await p.waitForURL("**/assinatura", { timeout: 20000 });
+await ativarAssinatura(db, EMAIL);
+await p.goto(`${BASE}/dashboard`, { waitUntil: "networkidle" });
 
 const empresa = await db.company.findFirst({
   where: { memberships: { some: { user: { email: EMAIL } } } },

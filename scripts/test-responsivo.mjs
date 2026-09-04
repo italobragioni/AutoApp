@@ -63,6 +63,8 @@ for (const vp of LARGURAS) {
   }
 
   await p.goto(`${BASE}/login`, { waitUntil: "networkidle" });
+  await p.fill('input[name="email"]', "demo@autovolt.com.br");
+  await p.fill('input[name="password"]', "autovolt123");
   await p.click('button[type="submit"]');
   await p.waitForURL("**/dashboard", { timeout: 15000 });
 
@@ -83,6 +85,8 @@ const ctx = await b.newContext({
 });
 const p = await ctx.newPage();
 await p.goto(`${BASE}/login`, { waitUntil: "networkidle" });
+await p.fill('input[name="email"]', "demo@autovolt.com.br");
+await p.fill('input[name="password"]', "autovolt123");
 await p.click('button[type="submit"]');
 await p.waitForURL("**/dashboard");
 

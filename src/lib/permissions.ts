@@ -40,6 +40,8 @@ export const PERMISSIONS = [
   /** Convidar, alterar papel e remover pessoas. */
   "team.manage",
   "company.create",
+  /** Ver planos, iniciar checkout e gerenciar a assinatura da empresa. */
+  "billing.manage",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];

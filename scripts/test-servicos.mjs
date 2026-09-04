@@ -46,6 +46,8 @@ function card(page, name) {
 }
 
 await p.goto(`${BASE}/login`, { waitUntil: "networkidle" });
+await p.fill('input[name="email"]', "demo@autovolt.com.br");
+await p.fill('input[name="password"]', "autovolt123");
 await p.click('button[type="submit"]');
 await p.waitForURL("**/dashboard");
 

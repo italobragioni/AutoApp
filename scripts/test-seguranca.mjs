@@ -25,6 +25,8 @@ import { createHash } from "node:crypto";
 import { chromium } from "playwright";
 import { PrismaClient } from "@prisma/client";
 
+import { ativarAssinatura } from "./_billing.mjs";
+
 const BASE = process.env.BASE_URL ?? "http://127.0.0.1:3000";
 const CHROME = process.env.CHROMIUM_PATH;
 const OUTBOX = process.env.MAIL_OUTBOX_FILE ?? ".mail-outbox.log";
@@ -120,7 +122,11 @@ await p.fill('input[name="companyName"]', `Empresa ${TAG}`);
 await p.fill('input[name="email"]', EMAIL);
 await p.fill('input[name="password"]', SENHA_ANTIGA);
 await p.click('button[type="submit"]');
-await p.waitForURL("**/dashboard", { timeout: 20000 });
+// O cadastro leva à assinatura (SaaS pago). Ativa como o webhook da Cakto faria,
+// para que os logins seguintes cheguem ao painel.
+await p.waitForURL("**/assinatura", { timeout: 20000 });
+await ativarAssinatura(db, EMAIL);
+await p.goto(`${BASE}/dashboard`, { waitUntil: "networkidle" });
 
 const conta = await db.user.findUnique({
   where: { email: EMAIL },

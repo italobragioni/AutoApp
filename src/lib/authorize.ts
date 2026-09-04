@@ -3,6 +3,7 @@ import "server-only";
 import { redirect } from "next/navigation";
 
 import { DENIED, can, type Permission } from "@/lib/permissions";
+import { SUBSCRIPTION_REQUIRED, companyHasAccess } from "@/lib/subscription";
 import { requireContext, type CurrentContext } from "@/lib/tenant";
 
 /**
@@ -27,10 +28,25 @@ export type Gate =
  * Devolve o contexto junto para a action nao precisar chamar requireContext()
  * de novo — o mesmo `cache()` serve os dois, mas assim fica explicito que a
  * empresa usada e a mesma que foi autorizada.
+ *
+ * Alem do papel, exige por padrao que a empresa da sessao tenha ASSINATURA
+ * ATIVA — o AUTOVOLT e pago e nenhuma acao operacional roda sem isso. A checagem
+ * e no servidor, com o status vindo do banco, nunca do formulario. As acoes do
+ * proprio fluxo de assinatura (iniciar checkout, gerenciar plano) passam
+ * `{ subscription: false }`: seria um beco sem saida exigir assinatura ativa
+ * justamente para poder assinar.
  */
-export async function permit(permission: Permission): Promise<Gate> {
+export async function permit(
+  permission: Permission,
+  opts: { subscription?: boolean } = {},
+): Promise<Gate> {
   const context = await requireContext();
   if (!can(context.role, permission)) return { ok: false, error: DENIED };
+
+  if (opts.subscription !== false && !(await companyHasAccess(context.company.id))) {
+    return { ok: false, error: SUBSCRIPTION_REQUIRED };
+  }
+
   return { ok: true, ...context };
 }
 

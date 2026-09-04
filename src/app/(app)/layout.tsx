@@ -5,6 +5,7 @@ import { VerifyEmailNotice } from "@/components/nav/VerifyEmailNotice";
 import { allowedHrefs } from "@/lib/navigation";
 import { can } from "@/lib/permissions";
 import { getRetention } from "@/lib/retention";
+import { requireActiveSubscription } from "@/lib/subscription";
 import { requireContext } from "@/lib/tenant";
 
 /**
@@ -13,6 +14,10 @@ import { requireContext } from "@/lib/tenant";
  */
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const context = await requireContext();
+  // O AUTOVOLT e pago: sem assinatura ativa da empresa da sessao, cai para
+  // /assinatura antes de qualquer tela operacional carregar. Vale para todos os
+  // papeis — o acesso segue a assinatura da empresa, nao a pessoa.
+  await requireActiveSubscription(context.company.id);
   const retention = await getRetention(context.company.id);
 
   // O menu mostra só o que o papel alcança. Esconder aqui é conforto: cada

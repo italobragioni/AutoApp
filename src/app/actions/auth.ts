@@ -104,7 +104,10 @@ export async function registerAction(_state: FormState, formData: FormData): Pro
   await sendVerificationEmail(user.id);
 
   await createSessionCookie({ userId: user.id, companyId });
-  redirect("/dashboard");
+  // O AUTOVOLT e pago e nao ha teste gratis: a empresa nasce SEM assinatura, e o
+  // primeiro destino e a pagina de assinatura. O acesso operacional so abre
+  // depois que um webhook valido da Cakto confirmar o pagamento.
+  redirect("/assinatura");
 }
 
 export async function logoutAction() {

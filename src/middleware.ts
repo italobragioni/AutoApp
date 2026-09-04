@@ -19,6 +19,8 @@ const PROTECTED = [
   "/campanhas",
   "/relatorios",
   "/configuracoes",
+  // Exige login, mas NAO assinatura ativa — e o destino de quem ainda nao pagou.
+  "/assinatura",
 ];
 
 export async function middleware(request: NextRequest) {
@@ -57,5 +59,6 @@ export const config = {
     "/campanhas/:path*",
     "/relatorios/:path*",
     "/configuracoes/:path*",
+    "/assinatura/:path*",
   ],
 };

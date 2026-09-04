@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Building2, Database, Repeat2, ShieldCheck, Users } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, Building2, CreditCard, Database, Repeat2, ShieldCheck, Users } from "lucide-react";
 
 import { Badge, Card, CardBody, CardHeader } from "@/components/ui";
 import { PageHeader } from "@/components/ui/page";
@@ -8,6 +9,8 @@ import { db } from "@/lib/db";
 import { dateFull } from "@/lib/format";
 import { ROLE_LABEL } from "@/lib/labels";
 import { ROLE_SUMMARY, type Role } from "@/lib/permissions";
+import { defaultPlan, getPlan } from "@/lib/plans";
+import { STATUS_LABEL, getSubscription, hasOperationalAccess } from "@/lib/subscription";
 
 import { CompanyForm, RetentionForm } from "./SettingsForms";
 import { InviteMember, NewCompany, TeamList } from "./TeamPanel";
@@ -21,10 +24,17 @@ export default async function SettingsPage() {
     "company.settings",
     "team.manage",
     "company.create",
+    "billing.manage",
   ]);
   const { company, user, role } = context;
   const canEdit = allowed["company.settings"];
   const canManageTeam = allowed["team.manage"];
+  const canManageBilling = allowed["billing.manage"];
+
+  // A assinatura desta empresa — so o dono vê o resumo aqui.
+  const subscription = canManageBilling ? await getSubscription(company.id) : null;
+  const subscriptionPlan = getPlan(subscription?.plan ?? "") ?? defaultPlan();
+  const subscriptionActive = hasOperationalAccess(subscription);
 
   const [members, invitations, counts] = await Promise.all([
     db.membership.findMany({
@@ -152,6 +162,41 @@ export default async function SettingsPage() {
         </div>
 
         <div className="min-w-0 space-y-5">
+          {canManageBilling && (
+            <Card>
+              <CardHeader
+                title="Assinatura"
+                description="Plano e situação de pagamento desta empresa."
+                action={<CreditCard size={16} className="text-volt-400" />}
+              />
+              <CardBody className="space-y-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted">Status</span>
+                  <Badge tone={subscriptionActive ? "success" : "warning"}>
+                    {STATUS_LABEL[subscription?.status ?? "pending"] ?? subscription?.status}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted">Plano</span>
+                  <span className="text-white">{subscriptionPlan.name}</span>
+                </div>
+                {subscription?.currentPeriodEnd && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted">Próxima renovação</span>
+                    <span className="text-white">{dateFull(subscription.currentPeriodEnd)}</span>
+                  </div>
+                )}
+                <Link
+                  href="/assinatura"
+                  className="focus-ring mt-1 inline-flex items-center gap-1.5 rounded text-sm font-medium text-volt-400 hover:text-volt-300"
+                >
+                  Gerenciar assinatura
+                  <ArrowRight size={14} />
+                </Link>
+              </CardBody>
+            </Card>
+          )}
+
           <Card>
             <CardHeader title="Suas empresas" description="Alterne pelo seletor no topo." />
             <ul className="divide-y divide-line">
