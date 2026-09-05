@@ -85,8 +85,8 @@ await p.fill('input[name="companyName"]', `Estética ${TAG}`);
 await p.fill('input[name="email"]', EMAIL);
 await p.fill('input[name="password"]', SENHA);
 await p.click('button[type="submit"]');
-await p.waitForURL("**/assinatura", { timeout: 20000 });
-check(p.url().endsWith("/assinatura"), "cadastro leva direto para /assinatura");
+await p.waitForURL("**/assinatura**", { timeout: 20000 });
+check(p.url().includes("/assinatura"), "cadastro leva direto para /assinatura");
 
 const empresa = await db.company.findFirst({
   where: { memberships: { some: { user: { email: EMAIL } } } },

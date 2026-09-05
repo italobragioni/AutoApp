@@ -8,11 +8,12 @@ import { AlertCircle, ArrowRight, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui";
 import { startCheckoutAction, type BillingState } from "@/app/actions/billing";
+import { trackInitiateCheckout } from "@/lib/meta-pixel";
 
-function SubmitCheckout({ label }: { label: string }) {
+function SubmitCheckout({ label, onClick }: { label: string; onClick?: () => void }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" size="lg" className="w-full" disabled={pending}>
+    <Button type="submit" size="lg" className="w-full" disabled={pending} onClick={onClick}>
       {pending ? "Abrindo checkout..." : label}
       {!pending && <ArrowRight size={16} />}
     </Button>
@@ -23,8 +24,29 @@ function SubmitCheckout({ label }: { label: string }) {
  * Botao que leva ao checkout da Cakto. O redirecionamento e feito pelo servidor
  * (a action monta a URL com a referencia segura). Aqui so tratamos erro.
  */
-export function SubscribeButton({ planId, label }: { planId: string; label: string }) {
+export function SubscribeButton({
+  planId,
+  label,
+  canCheckout,
+  value,
+}: {
+  planId: string;
+  label: string;
+  /** O checkout está configurado (URL da Cakto definida)? */
+  canCheckout: boolean;
+  /** Valor do plano para o evento InitiateCheckout (BRL). */
+  value: number;
+}) {
   const [state, formAction] = useActionState<BillingState, FormData>(startCheckoutAction, undefined);
+
+  // InitiateCheckout só quando o checkout REALMENTE vai iniciar: o botão só
+  // aparece sem acesso ativo, e aqui exigimos que a URL da Cakto exista. O
+  // disparo acontece no clique do botão, imediatamente antes de o form acionar
+  // o redirecionamento server-side para a Cakto — não ao abrir a página nem se
+  // houver erro de configuração.
+  function onInitiate() {
+    if (canCheckout) trackInitiateCheckout(value);
+  }
 
   return (
     <form action={formAction} className="space-y-3">
@@ -38,7 +60,7 @@ export function SubscribeButton({ planId, label }: { planId: string; label: stri
           {state.error}
         </p>
       )}
-      <SubmitCheckout label={label} />
+      <SubmitCheckout label={label} onClick={onInitiate} />
     </form>
   );
 }

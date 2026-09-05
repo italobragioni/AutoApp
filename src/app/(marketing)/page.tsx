@@ -13,6 +13,7 @@ import {
   Wrench,
 } from "lucide-react";
 
+import { LeadOnCtaClick } from "@/components/analytics/LeadOnCtaClick";
 import { Logo, LogoMark } from "@/components/brand/Logo";
 import { Badge, ButtonLink } from "@/components/ui";
 
@@ -64,6 +65,9 @@ const STEPS = [
 export default function LandingPage() {
   return (
     <div className="min-h-dvh">
+      {/* Meta Pixel: dispara Lead ao clicar em qualquer CTA que leva ao cadastro. */}
+      <LeadOnCtaClick />
+
       {/* Topo */}
       <header className="sticky top-0 z-30 border-b border-line bg-ink-950/85 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 sm:px-8">

@@ -84,7 +84,7 @@ await p.fill('input[name="password"]', SENHA);
 await p.click('button[type="submit"]');
 // O AUTOVOLT é pago: o cadastro leva à assinatura. O teste ativa a assinatura da
 // empresa (como o webhook da Cakto faria) e segue para o painel operacional.
-await p.waitForURL("**/assinatura", { timeout: 20000 });
+await p.waitForURL("**/assinatura**", { timeout: 20000 });
 await ativarAssinatura(db, EMAIL);
 await p.goto(`${BASE}/dashboard`, { waitUntil: "networkidle" });
 

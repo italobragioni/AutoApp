@@ -124,7 +124,7 @@ await p.fill('input[name="password"]', SENHA_ANTIGA);
 await p.click('button[type="submit"]');
 // O cadastro leva à assinatura (SaaS pago). Ativa como o webhook da Cakto faria,
 // para que os logins seguintes cheguem ao painel.
-await p.waitForURL("**/assinatura", { timeout: 20000 });
+await p.waitForURL("**/assinatura**", { timeout: 20000 });
 await ativarAssinatura(db, EMAIL);
 await p.goto(`${BASE}/dashboard`, { waitUntil: "networkidle" });
 

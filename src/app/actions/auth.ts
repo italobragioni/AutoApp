@@ -107,7 +107,11 @@ export async function registerAction(_state: FormState, formData: FormData): Pro
   // O AUTOVOLT e pago e nao ha teste gratis: a empresa nasce SEM assinatura, e o
   // primeiro destino e a pagina de assinatura. O acesso operacional so abre
   // depois que um webhook valido da Cakto confirmar o pagamento.
-  redirect("/assinatura");
+  //
+  // O marcador `bemvindo=1` (mesma pagina de destino) sinaliza ao front que o
+  // cadastro foi concluido AGORA, para disparar o CompleteRegistration do Meta
+  // Pixel uma unica vez. Nao altera a logica de autenticacao nem o destino.
+  redirect("/assinatura?bemvindo=1");
 }
 
 export async function logoutAction() {

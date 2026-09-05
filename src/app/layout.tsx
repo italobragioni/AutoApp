@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 
+import { MetaPixel } from "@/components/analytics/MetaPixel";
+
 import "./globals.css";
 
 // Fontes auto-hospedadas: o build nao depende de rede.
@@ -44,7 +46,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR" className={`${inter.variable} ${sora.variable}`}>
-      <body className="min-h-dvh bg-ink-950 font-sans">{children}</body>
+      <body className="min-h-dvh bg-ink-950 font-sans">
+        {children}
+        <MetaPixel />
+      </body>
     </html>
   );
 }

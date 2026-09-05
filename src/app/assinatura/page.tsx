@@ -16,6 +16,8 @@ import {
 } from "@/lib/subscription";
 import { requireContext } from "@/lib/tenant";
 
+import { SignupTracker } from "@/components/analytics/SignupTracker";
+
 import { ConfirmingPayment, SubscribeButton } from "./SubscribePanel";
 
 export const metadata: Metadata = { title: "Assinatura" };
@@ -36,9 +38,9 @@ const STATUS_TONE: Record<string, "success" | "warning" | "danger" | "muted"> = 
 export default async function AssinaturaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ retorno?: string }>;
+  searchParams: Promise<{ retorno?: string; bemvindo?: string }>;
 }) {
-  const { retorno } = await searchParams;
+  const { retorno, bemvindo } = await searchParams;
   const context = await requireContext();
   const { company, role, user } = context;
 
@@ -48,10 +50,17 @@ export default async function AssinaturaPage({
 
   const plan = getPlan(subscription?.plan ?? "") ?? defaultPlan();
   const status = (subscription?.status ?? "pending") as SubscriptionStatus;
+  // Valor rastreado (Meta) segue o preço do plano; 47.00 como padrão se não
+  // configurado. O checkout só pode iniciar se a URL da Cakto estiver definida.
+  const trackedValue = plan.priceCents > 0 ? plan.priceCents / 100 : 47;
+  const canCheckout = Boolean(plan.checkoutBaseUrl);
   const voltandoDoCheckout = retorno === "1";
 
   return (
     <div className="glow-top min-h-dvh">
+      {/* Meta Pixel: dispara CompleteRegistration uma vez após o cadastro. */}
+      <SignupTracker fire={bemvindo === "1"} />
+
       {/* Topo minimo: identidade + trocar de conta. */}
       <header className="border-b border-line">
         <div className="mx-auto flex h-16 max-w-3xl items-center justify-between px-5 sm:px-8">
@@ -147,6 +156,8 @@ export default async function AssinaturaPage({
                     <SubscribeButton
                       planId={plan.id}
                       label={status === "pending" ? "Assinar agora" : "Regularizar assinatura"}
+                      canCheckout={canCheckout}
+                      value={trackedValue}
                     />
                     <p className="mt-3 text-center text-xs text-muted">
                       Pagamento processado com segurança pela Cakto. O acesso é liberado assim que o

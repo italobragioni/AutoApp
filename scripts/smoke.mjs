@@ -41,7 +41,13 @@ const context = await browser.newContext({ viewport: { width: 1440, height: 1000
 const page = await context.newPage();
 page.on("pageerror", (error) => noise.push(`pageerror: ${error.message}`));
 page.on("console", (message) => {
-  if (message.type() === "error" && !expecting404) noise.push(`console: ${message.text()}`);
+  if (message.type() !== "error" || expecting404) return;
+  // O Meta Pixel busca connect.facebook.net/fbevents.js; neste ambiente o proxy
+  // bloqueia egress externo (ERR_TUNNEL_CONNECTION_FAILED). É esperado offline e
+  // some em produção, onde o CDN da Meta carrega — não é erro da aplicação.
+  const url = message.location()?.url ?? "";
+  if (/facebook\.(net|com)|fbevents/i.test(url)) return;
+  noise.push(`console: ${message.text()}`);
 });
 
 console.log("\n▸ Público");

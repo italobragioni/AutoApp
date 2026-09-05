@@ -16,7 +16,7 @@ const b = await chromium.launch(CHROME ? { executablePath: CHROME } : {});
 const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 }, locale: "pt-BR" });
 const p = await ctx.newPage();
 p.on("pageerror", (e) => noise.push(`pageerror: ${e.message}`));
-p.on("console", (m) => { if (m.type() === "error" && !expecting404) noise.push(`console: ${m.text()}`); });
+p.on("console", (m) => { if (m.type() === "error" && !expecting404 && !/facebook\.(net|com)|fbevents/i.test(m.location()?.url ?? "")) noise.push(`console: ${m.text()}`); });
 
 // login
 await p.goto(`${BASE}/login`, { waitUntil: "networkidle" });

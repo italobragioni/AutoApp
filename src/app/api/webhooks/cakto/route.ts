@@ -1,6 +1,11 @@
-import { authenticateWebhook, digestPayload, normalizeEvent } from "@/lib/cakto";
+import { CAKTO_EVENTS, authenticateWebhook, digestPayload, normalizeEvent } from "@/lib/cakto";
 import { db } from "@/lib/db";
+import { sendServerPurchase } from "@/lib/meta-capi";
+import { defaultPlan } from "@/lib/plans";
 import { applyCaktoEvent } from "@/lib/subscription";
+
+// Eventos da Cakto que representam dinheiro efetivamente capturado → Purchase.
+const PAYMENT_EVENTS: string[] = [CAKTO_EVENTS.purchaseApproved, CAKTO_EVENTS.subscriptionRenewed];
 
 /**
  * Webhook da Cakto — a unica fonte de verdade para liberar acesso.
@@ -81,6 +86,22 @@ export async function POST(request: Request) {
     `[cakto] evento ${event.type} → ${applied.result}` +
       (applied.companyId ? ` (empresa ${applied.companyId})` : " (empresa não resolvida)"),
   );
+
+  // Conversão Purchase (Meta) — só após um pagamento REALMENTE confirmado e
+  // aplicado a uma empresa. Fica neste caminho, que roda uma única vez por
+  // evento (o externalId já foi deduplicado acima), e usa o mesmo externalId
+  // como event_id — idempotente mesmo em reentrega/retry. Nunca lança nem
+  // atrasa a resposta além do timeout curto interno.
+  if (applied.result === "processed" && applied.companyId && PAYMENT_EVENTS.includes(event.type)) {
+    const plan = defaultPlan();
+    const value = plan.priceCents > 0 ? plan.priceCents / 100 : 47;
+    await sendServerPurchase({
+      eventId: externalId,
+      value,
+      currency: "BRL",
+      email: event.customerEmail,
+    });
+  }
 
   return Response.json({ ok: true, result: applied.result }, { status: 200 });
 }
