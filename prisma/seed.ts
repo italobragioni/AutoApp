@@ -96,6 +96,9 @@ async function reset() {
   await db.serviceItem.deleteMany();
   await db.vehicle.deleteMany();
   await db.customer.deleteMany();
+  await db.whatsAppMessage.deleteMany();
+  await db.whatsAppIntegration.deleteMany();
+  await db.whatsAppAutomationSettings.deleteMany();
   await db.subscription.deleteMany();
   await db.webhookEvent.deleteMany();
   await db.membership.deleteMany();
@@ -195,6 +198,26 @@ async function main() {
         currentPeriodEnd: periodEnd,
       },
     });
+  }
+
+  // WhatsApp Automático conectado (modo simulação) para as empresas demo — só
+  // no seed de desenvolvimento. Em produção a conexão vem do fluxo real.
+  console.log("→ Conectando WhatsApp Automático (simulação)...");
+  for (const [companyId, phone] of [
+    [primary.id, "1140028922"],
+    [secondary.id, "1130041515"],
+  ] as const) {
+    await db.whatsAppIntegration.create({
+      data: {
+        companyId,
+        provider: "mock",
+        status: "connected",
+        instanceName: `mock-${companyId.slice(-6)}`,
+        phoneNumber: phone,
+        connectedAt: new Date(),
+      },
+    });
+    await db.whatsAppAutomationSettings.create({ data: { companyId } });
   }
 
   console.log("→ Gerando dados de demonstração...");

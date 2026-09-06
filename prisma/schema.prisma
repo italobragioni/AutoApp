@@ -111,6 +111,9 @@ model Company {
   campaignParticipants CampaignParticipant[]
   invitations          Invitation[]
   subscription         Subscription?
+  whatsappIntegration  WhatsAppIntegration?
+  whatsappSettings     WhatsAppAutomationSettings?
+  whatsappMessages     WhatsAppMessage[]
 
   @@map("companies")
 }
@@ -268,6 +271,7 @@ model Customer {
   workOrders           WorkOrder[]
   contactLogs          ContactLog[]
   campaignParticipants CampaignParticipant[]
+  whatsappMessages     WhatsAppMessage[]
 
   @@index([companyId, name])
   @@map("customers")
@@ -293,6 +297,7 @@ model Vehicle {
   appointments Appointment[]
   quotes       Quote[]
   workOrders   WorkOrder[]
+  whatsappMessages WhatsAppMessage[]
 
   @@index([companyId])
   @@index([customerId])
@@ -348,6 +353,7 @@ model Appointment {
   vehicle   Vehicle?             @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
   services  AppointmentService[]
   workOrder WorkOrder?
+  whatsappMessages WhatsAppMessage[]
 
   @@index([companyId, startsAt])
   @@map("appointments")
@@ -432,6 +438,7 @@ model WorkOrder {
   appointment         Appointment?         @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
   items               WorkOrderItem[]
   campaignParticipant CampaignParticipant?
+  whatsappMessages    WhatsAppMessage[]
 
   @@unique([companyId, number])
   @@index([companyId, status])
@@ -554,4 +561,105 @@ model CampaignParticipant {
   @@index([companyId, customerId])
   @@index([campaignId, status])
   @@map("campaign_participants")
+}
+
+// ---------------------------------------------------------------------------
+// WhatsApp Automatico
+// ---------------------------------------------------------------------------
+
+// Conexao de WhatsApp de uma empresa.
+//
+// Uma linha por empresa (companyId @unique). Na fase atual o provider e "mock"
+// e a conexao pode ser simulada; quando a Evolution API entrar, os mesmos
+// campos guardam a instancia e o numero reais. O que identifica o provider e o
+// status mora aqui — nenhuma chave/segredo e gravado neste model (ficam em env,
+// no servidor).
+model WhatsAppIntegration {
+  id        String @id @default(cuid())
+  companyId String @unique
+  // mock | evolution | cloud
+  provider String @default("mock")
+  // disconnected | connecting | connected
+  status       String  @default("disconnected")
+  instanceName String?
+  phoneNumber  String?
+  connectedAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("whatsapp_integrations")
+}
+
+// Configuracao do WhatsApp Automatico da empresa.
+//
+// Simples de proposito: um interruptor geral e um por automacao. Os templates
+// customizados sao opcionais — nulo = usar o texto padrao do sistema
+// (src/lib/whatsapp/templates.ts). O usuario nao precisa escrever nada.
+model WhatsAppAutomationSettings {
+  id                       String  @id @default(cuid())
+  companyId                String  @unique
+  enabled                  Boolean @default(true)
+  retentionRiskEnabled     Boolean @default(true)
+  retentionInactiveEnabled Boolean @default(true)
+  appointmentReminderEnabled Boolean @default(true)
+  postServiceEnabled       Boolean @default(true)
+  // Fuso da empresa para respeitar o horario permitido de envio.
+  timezone String @default("America/Sao_Paulo")
+  // Templates opcionais. Nulo = texto padrao.
+  riskTemplate        String?
+  inactiveTemplate    String?
+  reminderTemplate    String?
+  postServiceTemplate String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("whatsapp_automation_settings")
+}
+
+// Historico de mensagens do WhatsApp Automatico — e tambem a fonte de
+// idempotencia e de cooldown.
+//
+// Guarda a mensagem FINAL (ja com as variaveis substituidas), nunca so o
+// template. O dedupeKey unico por empresa impede que o mesmo evento gere duas
+// mensagens (reenvio, re-execucao do cron, retry).
+model WhatsAppMessage {
+  id            String  @id @default(cuid())
+  companyId     String
+  customerId    String
+  vehicleId     String?
+  appointmentId String?
+  workOrderId   String?
+  // risco | inativo | lembrete | pos_servico
+  automationType String
+  // mock | evolution | cloud
+  provider String @default("mock")
+  // queued | sending | sent | failed | skipped
+  status  String
+  // Mensagem final que seria (ou foi) enviada.
+  content String
+  // Telefone de destino em E.164, quando havia numero valido.
+  toPhone           String?
+  externalMessageId String?
+  error             String?
+  // Chave de deduplicacao: "<tipo>:<id do evento/dia>".
+  dedupeKey String
+  sentAt    DateTime?
+  createdAt DateTime @default(now())
+
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer    Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  vehicle     Vehicle?     @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  workOrder   WorkOrder?   @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
+
+  // A duplicacao e impossivel no banco, nao apenas checada na aplicacao.
+  @@unique([companyId, dedupeKey])
+  @@index([companyId, createdAt])
+  @@index([companyId, customerId, automationType])
+  @@index([companyId, status])
+  @@map("whatsapp_messages")
 }

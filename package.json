@@ -29,7 +29,8 @@
     "test:responsivo": "node scripts/test-responsivo.mjs",
     "test:onboarding": "node scripts/test-onboarding.mjs",
     "test:mobile": "node scripts/test-mobile-forms.mjs",
-    "test:assinaturas": "node scripts/test-assinaturas.mjs"
+    "test:assinaturas": "node scripts/test-assinaturas.mjs",
+    "test:whatsapp": "node scripts/test-whatsapp.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.1.0",

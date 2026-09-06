@@ -42,6 +42,8 @@ export const PERMISSIONS = [
   "company.create",
   /** Ver planos, iniciar checkout e gerenciar a assinatura da empresa. */
   "billing.manage",
+  /** Conectar o WhatsApp, configurar automações e ver o histórico de envios. */
+  "whatsapp.manage",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -73,6 +75,7 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "retention.contact",
     "campaigns.write",
     "reports.finance",
+    "whatsapp.manage",
   ],
   staff: [
     "customers.write",

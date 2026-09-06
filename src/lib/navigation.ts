@@ -6,6 +6,7 @@ import {
   FileText,
   LayoutDashboard,
   Megaphone,
+  MessageCircle,
   Repeat2,
   Settings,
   Sparkles,
@@ -40,6 +41,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/ordens", label: "Ordens de Serviço", short: "OS", icon: Wrench, group: "operacao" },
   { href: "/retencao", label: "Retenção", short: "Retenção", icon: Repeat2, group: "crescimento", mobile: true },
   { href: "/campanhas", label: "Campanhas", short: "Campanhas", icon: Megaphone, group: "crescimento", requires: "campaigns.write" },
+  { href: "/whatsapp", label: "WhatsApp Automático", short: "WhatsApp", icon: MessageCircle, group: "crescimento", requires: "whatsapp.manage" },
   { href: "/relatorios", label: "Relatórios", short: "Relatórios", icon: BarChart3, group: "crescimento", requires: "reports.finance" },
   { href: "/configuracoes", label: "Configurações", short: "Config.", icon: Settings, group: "sistema" },
 ];

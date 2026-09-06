@@ -17,6 +17,7 @@ const PROTECTED = [
   "/ordens",
   "/retencao",
   "/campanhas",
+  "/whatsapp",
   "/relatorios",
   "/configuracoes",
   // Exige login, mas NAO assinatura ativa — e o destino de quem ainda nao pagou.
@@ -57,6 +58,7 @@ export const config = {
     "/ordens/:path*",
     "/retencao/:path*",
     "/campanhas/:path*",
+    "/whatsapp/:path*",
     "/relatorios/:path*",
     "/configuracoes/:path*",
     "/assinatura/:path*",
