@@ -15,6 +15,7 @@ import {
 
 import { LeadOnCtaClick } from "@/components/analytics/LeadOnCtaClick";
 import { Logo, LogoMark } from "@/components/brand/Logo";
+import { WistiaVideo } from "@/components/marketing/WistiaVideo";
 import { Badge, ButtonLink } from "@/components/ui";
 
 const PILLARS = [
@@ -63,6 +64,9 @@ const STEPS = [
 ];
 
 export default function LandingPage() {
+  // ID do vídeo VSL no Wistia (público). Sem ele, o bloco de vídeo não aparece.
+  const vslMediaId = process.env.NEXT_PUBLIC_WISTIA_MEDIA_ID?.trim();
+
   return (
     <div className="min-h-dvh">
       {/* Meta Pixel: dispara Lead ao clicar em qualquer CTA que leva ao cadastro. */}
@@ -100,6 +104,12 @@ export default function LandingPage() {
             Clientes, veículos, agenda, orçamentos e ordens de serviço em um sistema só — com um
             motor de retenção que mostra exatamente quem precisa de contato hoje.
           </p>
+
+          {vslMediaId && (
+            <div className="relative mx-auto mt-10 w-full max-w-2xl overflow-hidden rounded-2xl border border-line bg-ink-900/60 shadow-[0_20px_60px_-20px_rgba(0,0,0,.7)] ring-1 ring-line">
+              <WistiaVideo mediaId={vslMediaId} />
+            </div>
+          )}
 
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
             <ButtonLink href="/cadastro" size="lg">
