@@ -64,8 +64,9 @@ const STEPS = [
 ];
 
 export default function LandingPage() {
-  // ID do vídeo VSL no Wistia (público). Sem ele, o bloco de vídeo não aparece.
-  const vslMediaId = process.env.NEXT_PUBLIC_WISTIA_MEDIA_ID?.trim();
+  // ID do vídeo VSL no Wistia (público). Pode ser trocado por env sem mexer no
+  // código; o padrão é o vídeo atual (vertical 9:16).
+  const vslMediaId = process.env.NEXT_PUBLIC_WISTIA_MEDIA_ID?.trim() || "qf48bdtosk";
 
   return (
     <div className="min-h-dvh">
@@ -106,8 +107,8 @@ export default function LandingPage() {
           </p>
 
           {vslMediaId && (
-            <div className="relative mx-auto mt-10 w-full max-w-2xl overflow-hidden rounded-2xl border border-line bg-ink-900/60 shadow-[0_20px_60px_-20px_rgba(0,0,0,.7)] ring-1 ring-line">
-              <WistiaVideo mediaId={vslMediaId} />
+            <div className="relative mx-auto mt-10 w-full max-w-[320px] overflow-hidden rounded-2xl border border-line bg-ink-900/60 shadow-[0_20px_60px_-20px_rgba(0,0,0,.7)] ring-1 ring-line sm:max-w-[360px]">
+              <WistiaVideo mediaId={vslMediaId} paddingTop="177.78%" />
             </div>
           )}
 
