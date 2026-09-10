@@ -70,7 +70,7 @@ const PRICE_POINTS = [
 
 export default function LandingPage() {
   // Vídeo demo (Wistia, vertical). Trocável por env sem mexer no código.
-  const vslMediaId = process.env.NEXT_PUBLIC_WISTIA_MEDIA_ID?.trim() || "qf48bdtosk";
+  const vslMediaId = process.env.NEXT_PUBLIC_WISTIA_MEDIA_ID?.trim() || "yivd2pr2ga";
 
   return (
     <div className="min-h-dvh">
@@ -93,7 +93,7 @@ export default function LandingPage() {
       {/* 1. HERO */}
       <section className="glow-top relative overflow-hidden border-b border-line">
         <div className="grid-lines pointer-events-none absolute inset-0 opacity-50" />
-        <div className="relative mx-auto max-w-3xl px-5 py-16 text-center sm:px-8 sm:py-24">
+        <div className="relative mx-auto max-w-3xl px-5 py-14 text-center sm:px-8 sm:py-20">
           <Badge tone="volt" dot className="mb-6">
             Sistema para estética automotiva
           </Badge>
@@ -122,16 +122,16 @@ export default function LandingPage() {
 
       {/* 2. VÍDEO DEMO */}
       <section className="border-b border-line bg-ink-900/40">
-        <div className="mx-auto max-w-6xl px-5 py-14 text-center sm:px-8">
-          <div className="relative mx-auto w-full max-w-[320px] overflow-hidden rounded-2xl border border-line bg-ink-900/60 shadow-[0_20px_60px_-20px_rgba(0,0,0,.7)] ring-1 ring-line sm:max-w-[360px]">
-            <WistiaVideo mediaId={vslMediaId} paddingTop="177.78%" />
+        <div className="mx-auto max-w-6xl px-5 py-10 text-center sm:px-8 sm:py-14">
+          <div className="relative mx-auto w-full max-w-[300px] overflow-hidden rounded-2xl border border-line bg-ink-900/60 shadow-[0_20px_60px_-20px_rgba(0,0,0,.7)] ring-1 ring-line sm:max-w-[340px]">
+            <WistiaVideo mediaId={vslMediaId} aspect="0.5625" paddingTop="177.78%" />
           </div>
           <p className="mt-4 text-sm font-medium text-soft">Veja o sistema funcionando em 2 minutos</p>
         </div>
       </section>
 
       {/* 3. DOR */}
-      <section className="mx-auto max-w-6xl px-5 py-18 sm:px-8 sm:py-20">
+      <section className="mx-auto max-w-6xl px-5 py-12 sm:px-8 sm:py-16">
         <div className="mx-auto max-w-2xl">
           <h2 className="font-display text-2xl font-bold text-white sm:text-4xl">
             Você não tem um problema de clientes novos. Tem um problema de clientes que somem.
@@ -163,7 +163,7 @@ export default function LandingPage() {
 
       {/* 4. SOLUÇÃO EM 3 PASSOS */}
       <section className="border-y border-line bg-ink-900/50">
-        <div className="mx-auto max-w-6xl px-5 py-18 sm:px-8 sm:py-20">
+        <div className="mx-auto max-w-6xl px-5 py-12 sm:px-8 sm:py-16">
           <div className="max-w-2xl">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-volt-400">
               Como funciona
@@ -190,7 +190,7 @@ export default function LandingPage() {
       </section>
 
       {/* 5. FUNCIONALIDADES */}
-      <section className="mx-auto max-w-6xl px-5 py-18 sm:px-8 sm:py-20">
+      <section className="mx-auto max-w-6xl px-5 py-12 sm:px-8 sm:py-16">
         <div className="max-w-2xl">
           <h2 className="font-display text-2xl font-bold text-white sm:text-4xl">
             Tudo que a sua operação precisa, num lugar só
@@ -221,7 +221,7 @@ export default function LandingPage() {
 
       {/* 6. PREÇO */}
       <section className="border-y border-line bg-ink-900/50">
-        <div className="mx-auto max-w-6xl px-5 py-18 sm:px-8 sm:py-20">
+        <div className="mx-auto max-w-6xl px-5 py-12 sm:px-8 sm:py-16">
           <div className="mx-auto max-w-lg">
             <div className="surface relative overflow-hidden p-7 text-center sm:p-9">
               <div
@@ -262,7 +262,7 @@ export default function LandingPage() {
       </section>
 
       {/* 7. FAQ */}
-      <section className="mx-auto max-w-6xl px-5 py-18 sm:px-8 sm:py-20">
+      <section className="mx-auto max-w-6xl px-5 py-12 sm:px-8 sm:py-16">
         <h2 className="mb-8 text-center font-display text-2xl font-bold text-white sm:text-4xl">
           Perguntas frequentes
         </h2>
@@ -273,7 +273,7 @@ export default function LandingPage() {
       <section className="border-t border-line">
         <div className="glow-top relative overflow-hidden">
           <div className="grid-lines pointer-events-none absolute inset-0 opacity-40" />
-          <div className="relative mx-auto max-w-3xl px-5 py-18 text-center sm:px-8 sm:py-24">
+          <div className="relative mx-auto max-w-3xl px-5 py-14 text-center sm:px-8 sm:py-20">
             <h2 className="mx-auto max-w-2xl font-display text-2xl font-bold text-white sm:text-4xl">
               Pare de perder o cliente que já é seu.
             </h2>
