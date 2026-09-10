@@ -110,23 +110,23 @@ export default function LandingPage() {
             muito menos do que achar cliente novo.
           </p>
 
-          <div className="mt-9 flex flex-col items-center gap-3">
+          {/* VÍDEO DEMO — acima do primeiro botão */}
+          <div className="mx-auto mt-9 w-full max-w-[300px] sm:max-w-[340px]">
+            <div className="relative overflow-hidden rounded-2xl border border-line bg-ink-900/60 shadow-[0_20px_60px_-20px_rgba(0,0,0,.7)] ring-1 ring-line">
+              <WistiaVideo mediaId={vslMediaId} aspect="0.5625" paddingTop="177.78%" />
+            </div>
+            <p className="mt-3 text-sm font-medium text-soft">
+              Veja o sistema funcionando em 2 minutos
+            </p>
+          </div>
+
+          <div className="mt-8 flex flex-col items-center gap-3">
             <CtaButton />
             <p className="text-sm text-muted">
               Plano único de <strong className="text-soft">R$47/mês</strong> · sem fidelidade ·
               cancele quando quiser
             </p>
           </div>
-        </div>
-      </section>
-
-      {/* 2. VÍDEO DEMO */}
-      <section className="border-b border-line bg-ink-900/40">
-        <div className="mx-auto max-w-6xl px-5 py-10 text-center sm:px-8 sm:py-14">
-          <div className="relative mx-auto w-full max-w-[300px] overflow-hidden rounded-2xl border border-line bg-ink-900/60 shadow-[0_20px_60px_-20px_rgba(0,0,0,.7)] ring-1 ring-line sm:max-w-[340px]">
-            <WistiaVideo mediaId={vslMediaId} aspect="0.5625" paddingTop="177.78%" />
-          </div>
-          <p className="mt-4 text-sm font-medium text-soft">Veja o sistema funcionando em 2 minutos</p>
         </div>
       </section>
 
