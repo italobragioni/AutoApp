@@ -14,6 +14,32 @@ export type NicheId = "vidracaria" | "serralheria" | "marcenaria";
 
 export type Unit = "m2" | "ml" | "un" | "kg" | "chapa" | "modulo" | "hora";
 
+// Todas as unidades reconhecidas + rotulos legiveis. Fonte unica para selects
+// e validacao.
+export const ALL_UNITS: Unit[] = [
+  "m2",
+  "ml",
+  "un",
+  "kg",
+  "chapa",
+  "modulo",
+  "hora",
+];
+
+export const UNIT_LABELS: Record<Unit, string> = {
+  m2: "m²",
+  ml: "metro linear",
+  un: "unidade",
+  kg: "kg",
+  chapa: "chapa",
+  modulo: "módulo",
+  hora: "hora",
+};
+
+export function isUnit(value: string): value is Unit {
+  return (ALL_UNITS as string[]).includes(value);
+}
+
 export type SpecFieldType = "number" | "text" | "select";
 
 export type SpecField = {
@@ -54,8 +80,8 @@ function num(spec: Record<string, unknown>, key: string): number | null {
 
 const vidracaria: NicheConfig = {
   id: "vidracaria",
-  label: "Vidracaria",
-  description: "Vidros temperados, box, espelhos, guarda-corpos — cobranca por m2.",
+  label: "Vidraçaria",
+  description: "Vidros temperados, box, espelhos, guarda-corpos — cobrança por m².",
   units: ["m2", "un", "ml"],
   itemFields: [
     { key: "largura_mm", label: "Largura", type: "number", suffix: "mm", required: true },
@@ -84,7 +110,7 @@ const vidracaria: NicheConfig = {
 const serralheria: NicheConfig = {
   id: "serralheria",
   label: "Serralheria",
-  description: "Portoes, grades, estruturas metalicas — metro linear, unidade ou peso.",
+  description: "Portões, grades, estruturas metálicas — metro linear, unidade ou peso.",
   units: ["ml", "un", "kg", "m2"],
   itemFields: [
     { key: "comprimento_m", label: "Comprimento", type: "number", suffix: "m" },
@@ -98,7 +124,7 @@ const serralheria: NicheConfig = {
 const marcenaria: NicheConfig = {
   id: "marcenaria",
   label: "Marcenaria",
-  description: "Moveis planejados, armarios, moveis sob medida — modulo, m2 ou unidade.",
+  description: "Móveis planejados, armários, móveis sob medida — módulo, m² ou unidade.",
   units: ["modulo", "m2", "un", "ml"],
   itemFields: [
     { key: "largura_mm", label: "Largura", type: "number", suffix: "mm" },

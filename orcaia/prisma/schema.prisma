@@ -155,9 +155,10 @@ model Customer {
   id        String   @id @default(cuid())
   companyId String
   name      String
+  document  String? // CPF ou CNPJ
   phone     String?
+  whatsapp  String?
   email     String?
-  document  String?
   address   String?
   notes     String?
   createdAt DateTime @default(now())

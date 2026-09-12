@@ -15,7 +15,7 @@ export default async function AppLayout({
   const niche = getNiche(ctx.company.niche);
 
   return (
-    <div className="flex min-h-screen">
+    <div className="min-h-screen md:flex">
       <Sidebar
         companyName={ctx.company.name}
         nicheLabel={niche?.label ?? ctx.company.niche}
@@ -23,7 +23,7 @@ export default async function AppLayout({
         activeCompanyId={ctx.company.id}
       />
       <main className="flex-1 overflow-x-hidden">
-        <div className="mx-auto max-w-5xl px-6 py-8">{children}</div>
+        <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">{children}</div>
       </main>
     </div>
   );

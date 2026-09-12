@@ -2,17 +2,30 @@
 
 **Plataforma de geracao de orcamentos para prestadores de servico.**
 
-Nichos suportados nesta base: **Vidracaria**, **Serralheria** e **Marcenaria**.
-
-> Etapa 1 — **arquitetura base**. Esta versao entrega o alicerce profissional,
-> escalavel e multiempresa, com o schema, a autenticacao segura, o isolamento
-> por empresa, o motor de precificacao e o esqueleto navegavel das telas. Os
-> CRUDs completos e a criacao de orcamentos entram nas proximas etapas.
+Nichos suportados: **Vidraçaria**, **Serralheria** e **Marcenaria**.
 
 Este projeto vive na pasta `orcaia/` e e **independente** do AutoVolt (na raiz do
 repositorio) — nenhum arquivo do AutoVolt e compartilhado ou alterado.
 
----
+## Status
+
+Nucleo funcional, com persistencia real em PostgreSQL (sem dados mockados):
+
+- Cadastro, login, logout (bcrypt + sessao JWT em cookie httpOnly)
+- Multiempresa: criar/alternar empresas; **isolamento total por empresa**
+- Selecao de nicho na criacao da empresa
+- Dashboard com contagens reais
+- Clientes (CRUD): nome, CPF/CNPJ, telefone, WhatsApp, e-mail, endereco, observacoes
+- Produtos e servicos (CRUD)
+- Materiais (CRUD)
+- Custos: mao de obra, deslocamento e outros (fixos ou percentuais)
+- Configuracao da margem de lucro (e mao de obra padrao)
+- Perfil do usuario e troca de senha
+- Validacao com Zod, rotas protegidas e tratamento de erros em todas as acoes
+
+Ainda **nao** implementado (previsto para as proximas etapas): montagem de
+orcamentos com o motor de precificacao, cobranca/assinatura e a extensao Chrome.
+Os modelos correspondentes ja existem no schema.
 
 ## Stack
 
@@ -31,9 +44,12 @@ Requer um PostgreSQL acessivel.
 cd orcaia
 npm install
 cp .env.example .env        # defina DATABASE_URL e AUTH_SECRET
-npm run migrate:new         # cria a primeira migration a partir do schema
+npm run migrate:deploy      # aplica as migrations versionadas
 npm run dev                 # http://localhost:3000
 ```
+
+Em desenvolvimento, para criar novas migrations a partir de mudancas no schema:
+`npm run migrate:new`.
 
 | Script | O que faz |
 | --- | --- |
@@ -49,13 +65,16 @@ npm run dev                 # http://localhost:3000
 
 ```
 User ──< Membership >── Company ──< Customer, Material, Product,
-                                    LaborRate, PriceTable, Quote ...
+                                    LaborRate, AdditionalCost, PriceTable, Quote ...
 ```
 
 - Um usuario acessa uma empresa **somente** via `Membership` (`owner | manager | staff`).
 - A sessao guarda `userId + companyId`; **toda** query e escopada por `companyId`.
 - `getCurrentContext()` / `requireContext()` (`src/lib/core/tenant.ts`) revalidam
   a cada request se o usuario ainda e membro da empresa da sessao.
+- Escritas usam `updateMany` / `deleteMany` com `where: { id, companyId }`, e
+  leituras dinamicas usam `findFirst({ where: { id, companyId } })`: um registro
+  de outra empresa simplesmente **nao existe** (404).
 - `src/middleware.ts` e a primeira barreira das rotas protegidas.
 
 ### Camadas
@@ -66,16 +85,16 @@ src/
 │   ├── (marketing)/          landing publica
 │   ├── (auth)/               login, cadastro
 │   ├── (app)/                area logada (sidebar + telas)
-│   │   ├── dashboard/  clientes/  catalogo/
-│   │   ├── precos/     orcamentos/ configuracoes/
-│   └── actions/              Server Actions (auth, empresa)
+│   │   ├── dashboard/  clientes/  produtos/  materiais/  custos/  configuracoes/
+│   └── actions/              Server Actions (auth, empresa, clientes, catalogo, settings)
 ├── components/
-│   ├── nav/                  sidebar + seletor de empresa
+│   ├── nav/                  sidebar responsiva + seletor de empresa
+│   ├── forms/                formularios (client) com useActionState
 │   └── ui/                   design system minimo
 └── lib/
-    ├── core/                 db, session, password, tenant, permissions, format
+    ├── core/                 db, session, password, tenant, permissions, money, actions
     ├── niches/               configuracao declarativa por nicho
-    ├── pricing/              motor de precificacao (puro)
+    ├── pricing/              motor de precificacao (puro; usado nas proximas etapas)
     └── validation/           schemas Zod
 ```
 
@@ -84,22 +103,8 @@ src/
 Um **nucleo unico + configuracao declarativa por nicho** (`src/lib/niches/`).
 Cada nicho descreve unidades, campos do item (`spec`) e como derivar a
 quantidade. Os atributos especificos vao em colunas **JSON (`spec`)** de
-`Product` e `QuoteItem`, sem poluir o schema. Adicionar um 4o nicho = adicionar
-um objeto de configuracao; o nucleo nao muda.
-
-### Motor de precificacao
-
-`src/lib/pricing/` recebe **materiais + mao de obra + custos adicionais +
-quantidade + margem** e devolve o preco com detalhamento. E puro e independente
-de nicho: o que muda entre nichos sao apenas os inputs.
-
-## Previsto para etapas futuras (nao implementado nesta base)
-
-O schema ja esta preparado para receber, sem retrabalho:
-
-- **Cobranca / assinatura** por empresa (controle de acesso por plano).
-- **API REST `/api/v1`** autenticada por token por empresa (`ApiToken`), para a
-  **extensao Chrome no WhatsApp Web** transformar mensagens em orcamentos.
+`Product` e `QuoteItem`. Adicionar um 4o nicho = adicionar um objeto de
+configuracao; o nucleo nao muda.
 
 Convencoes: dinheiro sempre em **centavos**; percentuais em **pontos-base**;
 toda query escopada por `companyId`.

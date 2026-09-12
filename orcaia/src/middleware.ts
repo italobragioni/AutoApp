@@ -10,9 +10,9 @@ import { COOKIE_NAME } from "@/lib/core/session";
 const PROTECTED_PREFIXES = [
   "/dashboard",
   "/clientes",
-  "/catalogo",
-  "/precos",
-  "/orcamentos",
+  "/produtos",
+  "/materiais",
+  "/custos",
   "/configuracoes",
 ];
 
@@ -38,9 +38,9 @@ export const config = {
   matcher: [
     "/dashboard/:path*",
     "/clientes/:path*",
-    "/catalogo/:path*",
-    "/precos/:path*",
-    "/orcamentos/:path*",
+    "/produtos/:path*",
+    "/materiais/:path*",
+    "/custos/:path*",
     "/configuracoes/:path*",
   ],
 };

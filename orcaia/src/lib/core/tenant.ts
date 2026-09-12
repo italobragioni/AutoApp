@@ -54,8 +54,11 @@ export async function getCurrentContext(): Promise<TenantContext | null> {
   if (!user) return null;
 
   // Sessao cortada: o token foi emitido antes do ultimo corte (troca de senha).
-  if (session.iat && session.iat * 1000 < user.sessionsValidFrom.getTime()) {
-    return null;
+  // Comparacao em segundos porque o `iat` do JWT tem granularidade de segundos —
+  // assim a sessao reemitida no mesmo segundo do corte continua valida.
+  if (session.iat) {
+    const validFromSec = Math.floor(user.sessionsValidFrom.getTime() / 1000);
+    if (session.iat < validFromSec) return null;
   }
 
   const active = user.memberships.find((m) => m.companyId === session.companyId);
