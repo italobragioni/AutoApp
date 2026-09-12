@@ -19,12 +19,10 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  // Conexao usada pelo app em runtime (pode ser a "pooled" do Neon).
-  url       = env("DATABASE_URL")
-  // Conexao direta usada pelas migrations no build. No Neon/Vercel e a
-  // variavel DATABASE_URL_UNPOOLED (criada automaticamente pela integracao).
-  // Em ambiente local sem pooler, aponte-a para o mesmo valor de DATABASE_URL.
-  directUrl = env("DATABASE_URL_UNPOOLED")
+  // O app usa sempre DATABASE_URL. As migrations no build usam a melhor conexao
+  // direta disponivel — isso e resolvido por scripts/db-deploy.mjs, que nao
+  // depende de um nome fixo de variavel (funciona com qualquer setup do Neon).
+  url      = env("DATABASE_URL")
 }
 
 // ---------------------------------------------------------------------------
