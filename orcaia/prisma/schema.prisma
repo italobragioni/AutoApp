@@ -1,0 +1,374 @@
+// ORCAIA - Schema multi-tenant
+//
+// Todo dado operacional pertence a uma Company (empresa prestadora de servico).
+// O acesso de um User a uma Company acontece SEMPRE via Membership, e todas as
+// queries da aplicacao sao escopadas por `companyId` (ver src/lib/core/tenant.ts).
+//
+// Valores monetarios sao guardados em CENTAVOS (inteiros) para evitar erro de
+// ponto flutuante. Percentuais (margem) sao guardados em PONTOS-BASE (bps):
+// 2000 = 20,00%.
+//
+// O schema foi desenhado para receber os tres nichos (vidracaria, serralheria,
+// marcenaria) sem duplicar tabelas: os atributos especificos de cada nicho vao
+// em colunas JSON (`spec`), enquanto o nucleo permanece o mesmo. Ver
+// src/lib/niches/.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Identidade e multi-empresa
+// ---------------------------------------------------------------------------
+
+model User {
+  id                String    @id @default(cuid())
+  name              String
+  email             String    @unique
+  passwordHash      String
+  avatarColor       String    @default("#2563EB")
+  // Nulo = e-mail ainda nao confirmado. Nao bloqueia o uso da plataforma.
+  emailVerifiedAt   DateTime?
+  // Corte de sessoes: um cookie assinado ANTES deste instante deixa de valer.
+  // E assim que trocar a senha derruba as sessoes antigas sem guardar sessao
+  // no banco — a arquitetura continua com JWT sem estado.
+  sessionsValidFrom DateTime  @default(now())
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  memberships     Membership[]
+  authTokens      AuthToken[]
+  invitesSent     Invitation[] @relation("InvitationCreatedBy")
+  invitesAccepted Invitation[] @relation("InvitationAcceptedBy")
+
+  @@map("users")
+}
+
+// Token de uso unico para recuperacao de senha e verificacao de e-mail.
+// O que vai no link NUNCA e gravado — a coluna guarda o SHA-256 dele, entao um
+// vazamento do banco nao entrega nenhum link utilizavel.
+model AuthToken {
+  id        String    @id @default(cuid())
+  userId    String
+  purpose   String // recuperacao | verificacao
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose, createdAt])
+  @@map("auth_tokens")
+}
+
+model Company {
+  id       String @id @default(cuid())
+  name     String
+  slug     String @unique
+  // Nicho da empresa. Define presets, campos e unidades (ver src/lib/niches/).
+  niche    String // vidracaria | serralheria | marcenaria
+  document String? // CNPJ
+  phone    String?
+  email    String?
+  city     String?
+  state    String?
+  address  String?
+  logoUrl  String?
+
+  // Politicas de preco padrao da empresa (usadas como default nos orcamentos).
+  defaultMarginBps    Int @default(2000) // 2000 = 20% de margem
+  defaultLaborRateCents Int @default(0)  // valor/hora padrao de mao de obra
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships     Membership[]
+  invitations     Invitation[]
+  customers       Customer[]
+  materials       Material[]
+  products        Product[]
+  laborRates      LaborRate[]
+  priceTables     PriceTable[]
+  additionalCosts AdditionalCost[]
+  quotes          Quote[]
+
+  // Previstos para etapas futuras (nao criados nesta etapa):
+  //   subscription  Subscription?   -> cobranca / controle de acesso por plano
+  //   apiTokens     ApiToken[]      -> autenticacao da extensao Chrome (API v1)
+
+  @@map("companies")
+}
+
+// Vinculo usuario <-> empresa. Um usuario pode operar varias empresas.
+model Membership {
+  id        String   @id @default(cuid())
+  userId    String
+  companyId String
+  role      String   @default("owner") // owner | manager | staff
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId])
+  @@index([companyId])
+  @@map("memberships")
+}
+
+// Convite para alguem entrar em uma empresa. E o passo anterior ao Membership:
+// quando aceito, o Membership e criado com o papel registrado aqui.
+model Invitation {
+  id        String @id @default(cuid())
+  companyId String
+  email     String
+  role      String @default("staff") // owner | manager | staff
+  token     String @unique
+  status    String @default("pendente") // pendente | aceito | revogado
+
+  invitedById  String?
+  acceptedById String?
+  expiresAt    DateTime
+  acceptedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  company    Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  invitedBy  User?   @relation("InvitationCreatedBy", fields: [invitedById], references: [id], onDelete: SetNull)
+  acceptedBy User?   @relation("InvitationAcceptedBy", fields: [acceptedById], references: [id], onDelete: SetNull)
+
+  @@index([companyId, status])
+  @@index([email])
+  @@map("invitations")
+}
+
+// ---------------------------------------------------------------------------
+// Cadastros
+// ---------------------------------------------------------------------------
+
+model Customer {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  phone     String?
+  email     String?
+  document  String?
+  address   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  quotes  Quote[]
+
+  @@index([companyId, name])
+  @@map("customers")
+}
+
+// Insumo/material (vidro, aluminio, MDF, ferragens...). O custo e por unidade.
+model Material {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  unit      String // m2 | ml | un | kg | chapa ... (ver src/lib/niches)
+  costCents Int      @default(0) // custo por unidade
+  supplier  String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company          Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  productMaterials ProductMaterial[]
+
+  @@index([companyId, name])
+  @@map("materials")
+}
+
+// Produto/servico ofertavel do catalogo. Os atributos especificos do nicho
+// (ex.: espessura do vidro, tipo de perfil) vao em `spec` (JSON), mantendo o
+// nucleo generico.
+model Product {
+  id            String   @id @default(cuid())
+  companyId     String
+  name          String
+  description   String?
+  category      String?
+  niche         String // vidracaria | serralheria | marcenaria
+  unit          String // unidade de venda: m2 | ml | un | modulo | hora
+  basePriceCents Int?    // preco base opcional (quando nao calculado por composicao)
+  spec          Json?    // atributos especificos do nicho
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  company          Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  productMaterials ProductMaterial[]
+  priceTableItems  PriceTableItem[]
+  quoteItems       QuoteItem[]
+
+  @@index([companyId, niche])
+  @@map("products")
+}
+
+// Composicao (BOM): quanto de cada material um produto consome por unidade
+// vendida. Alimenta o motor de precificacao (src/lib/pricing).
+model ProductMaterial {
+  id         String @id @default(cuid())
+  productId  String
+  materialId String
+  // Quantidade de material consumida por unidade do produto (pode ser fracionada).
+  quantity   Float  @default(1)
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  material Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, materialId])
+  @@index([productId])
+  @@map("product_materials")
+}
+
+// Mao de obra. Pode ser cobrada por hora, por m2, por unidade etc.
+model LaborRate {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  unit      String   @default("hora") // hora | m2 | ml | un
+  rateCents Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("labor_rates")
+}
+
+// Tabela de precos. Uma empresa pode ter varias (padrao, atacado, cliente X...).
+model PriceTable {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String
+  isDefault Boolean  @default(false)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  items   PriceTableItem[]
+  quotes  Quote[]
+
+  @@index([companyId])
+  @@map("price_tables")
+}
+
+model PriceTableItem {
+  id           String @id @default(cuid())
+  priceTableId String
+  productId    String
+  priceCents   Int
+
+  priceTable PriceTable @relation(fields: [priceTableId], references: [id], onDelete: Cascade)
+  product    Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([priceTableId, productId])
+  @@index([priceTableId])
+  @@map("price_table_items")
+}
+
+// Custo adicional reutilizavel (frete, deslocamento, taxa de projeto...).
+// `kind` decide qual campo vale: fixo -> amountCents; percentual -> percentBps.
+model AdditionalCost {
+  id         String   @id @default(cuid())
+  companyId  String
+  name       String
+  kind       String   @default("fixo") // fixo | percentual
+  amountCents Int?    // usado quando kind = fixo
+  percentBps Int?     // usado quando kind = percentual (2000 = 20%)
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("additional_costs")
+}
+
+// ---------------------------------------------------------------------------
+// Orcamentos
+// ---------------------------------------------------------------------------
+
+model Quote {
+  id           String    @id @default(cuid())
+  companyId    String
+  number       Int
+  customerId   String
+  priceTableId String?
+  status       String    @default("rascunho") // rascunho | enviado | aprovado | recusado | expirado | cancelado
+  validUntil   DateTime?
+
+  // Totais consolidados (em centavos). Recalculados pelo motor de precificacao.
+  subtotalCents        Int @default(0)
+  discountCents        Int @default(0)
+  additionalCostsCents Int @default(0)
+  // Margem aplicada ao orcamento (pontos-base). Default vem da empresa.
+  marginBps            Int @default(2000)
+  totalCents           Int @default(0)
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company      Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer     Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  priceTable   PriceTable?       @relation(fields: [priceTableId], references: [id], onDelete: SetNull)
+  items        QuoteItem[]
+  statusEvents QuoteStatusEvent[]
+
+  @@unique([companyId, number])
+  @@index([companyId, status])
+  @@map("quotes")
+}
+
+model QuoteItem {
+  id             String @id @default(cuid())
+  quoteId        String
+  productId      String?
+  description    String
+  quantity       Float   @default(1)
+  unit           String  @default("un")
+  unitPriceCents Int     @default(0)
+  // Medidas e atributos usados nesta linha (largura x altura, perfil etc.),
+  // conforme o nicho. Ver src/lib/niches.
+  spec           Json?
+  // Detalhamento do calculo (materiais + mao de obra + custos + margem) desta
+  // linha, gerado pelo motor de precificacao. So leitura/auditoria.
+  breakdown      Json?
+
+  quote   Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([quoteId])
+  @@map("quote_items")
+}
+
+// Trilha de mudancas de status do orcamento.
+model QuoteStatusEvent {
+  id        String   @id @default(cuid())
+  quoteId   String
+  companyId String
+  status    String
+  note      String?
+  createdAt DateTime @default(now())
+
+  quote Quote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  @@index([quoteId, createdAt])
+  @@map("quote_status_events")
+}

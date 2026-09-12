@@ -1,0 +1,106 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  LayoutDashboard,
+  Users,
+  Package,
+  Tags,
+  FileText,
+  Settings,
+  LogOut,
+  type LucideIcon,
+} from "lucide-react";
+import { NAV_ITEMS } from "@/lib/navigation";
+import { logoutAction } from "@/app/actions/auth";
+import { switchCompanyAction } from "@/app/actions/company";
+import { cn } from "@/lib/core/cn";
+
+const ICONS: Record<string, LucideIcon> = {
+  LayoutDashboard,
+  Users,
+  Package,
+  Tags,
+  FileText,
+  Settings,
+};
+
+type Props = {
+  companyName: string;
+  nicheLabel: string;
+  memberships: { companyId: string; companyName: string }[];
+  activeCompanyId: string;
+};
+
+export function Sidebar({
+  companyName,
+  nicheLabel,
+  memberships,
+  activeCompanyId,
+}: Props) {
+  const pathname = usePathname();
+
+  return (
+    <aside className="flex w-60 flex-col border-r border-surface-border bg-white">
+      <div className="p-5">
+        <span className="text-lg font-bold text-brand">ORCAIA</span>
+      </div>
+
+      {/* Seletor de empresa (multiempresa) */}
+      <div className="px-4">
+        {memberships.length > 1 ? (
+          <form action={switchCompanyAction}>
+            <select
+              name="companyId"
+              defaultValue={activeCompanyId}
+              onChange={(e) => e.currentTarget.form?.requestSubmit()}
+              className="w-full rounded-lg border border-surface-border bg-surface-soft px-3 py-2 text-sm font-medium text-ink"
+            >
+              {memberships.map((m) => (
+                <option key={m.companyId} value={m.companyId}>
+                  {m.companyName}
+                </option>
+              ))}
+            </select>
+          </form>
+        ) : (
+          <div className="rounded-lg bg-surface-soft px-3 py-2">
+            <p className="truncate text-sm font-medium text-ink">{companyName}</p>
+          </div>
+        )}
+        <p className="mt-1 px-1 text-xs text-ink-faint">{nicheLabel}</p>
+      </div>
+
+      <nav className="mt-4 flex-1 space-y-1 px-3">
+        {NAV_ITEMS.map((item) => {
+          const Icon = ICONS[item.icon];
+          const active =
+            pathname === item.href || pathname.startsWith(`${item.href}/`);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                active
+                  ? "bg-brand-muted text-brand"
+                  : "text-ink-soft hover:bg-surface-soft",
+              )}
+            >
+              {Icon ? <Icon className="h-4 w-4" /> : null}
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      <form action={logoutAction} className="p-3">
+        <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-ink-soft hover:bg-surface-soft">
+          <LogOut className="h-4 w-4" />
+          Sair
+        </button>
+      </form>
+    </aside>
+  );
+}
