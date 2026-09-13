@@ -8,9 +8,14 @@ import { EmptyState } from "@/components/ui/field";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { QuoteHeaderForm } from "@/components/forms/QuoteForms";
+import { SteelQuoteNovo } from "@/components/quote/SteelQuoteNovo";
 
 export default async function NovoOrcamentoPage() {
   const ctx = await requireContext();
+
+  if (ctx.company.niche === "serralheria") {
+    return <SteelQuoteNovo companyId={ctx.company.id} />;
+  }
 
   if (ctx.company.niche !== "vidracaria") {
     return (

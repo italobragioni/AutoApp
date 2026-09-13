@@ -106,6 +106,10 @@ model Company {
   finishOptions   FinishOption[]
   hardwareOptions HardwareOption[]
 
+  // Catalogo especifico do nicho Serralheria (ver src/lib/niches/serralheria).
+  steelMaterials SteelMaterial[]
+  steelProducts  SteelProduct[]
+
   // Previstos para etapas futuras (nao criados nesta etapa):
   //   subscription  Subscription?   -> cobranca / controle de acesso por plano
   //   apiTokens     ApiToken[]      -> autenticacao da extensao Chrome (API v1)
@@ -334,9 +338,12 @@ model Quote {
   marginBps            Int @default(2000)
   totalCents           Int @default(0)
 
-  notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  notes        String?
+  // Campos da proposta profissional (usados p.ex. pela serralheria).
+  deliveryTime String? // prazo estimado
+  paymentTerms String? // condicoes de pagamento
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   company      Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
   customer     Customer           @relation(fields: [customerId], references: [id], onDelete: Cascade)
@@ -445,4 +452,56 @@ model HardwareOption {
 
   @@index([companyId])
   @@map("hardware_options")
+}
+
+// ---------------------------------------------------------------------------
+// Nicho: Serralheria
+// ---------------------------------------------------------------------------
+//
+// Precos e formulas 100% configuraveis pela empresa. Estes modelos so sao
+// usados por empresas com niche = "serralheria".
+
+// Catalogo de materiais (Ferro, Aco carbono, Aluminio, Inox, Outros). Preco de
+// referencia por unidade de medida (kg, metro, m2 ou unidade).
+model SteelMaterial {
+  id                String   @id @default(cuid())
+  companyId         String
+  name              String
+  unit              String   @default("kg") // kg | ml | m2 | un
+  pricePerUnitCents Int      @default(0)
+  active            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("steel_materials")
+}
+
+// Produto/servico de serralheria (portao, grade, corrimao...). A "formula" e a
+// escolha da unidade base + as taxas por unidade base. Nenhum preco fixo no
+// codigo: tudo vem daqui.
+model SteelProduct {
+  id                       String   @id @default(cuid())
+  companyId                String
+  name                     String
+  serviceType              String // portao | grade | corrimao | guarda_corpo | estrutura | escada | cobertura | porta | janela | outros
+  // Unidade base que dirige o calculo (a "formula"): un | ml | m2 | kg.
+  baseUnit                 String   @default("m2")
+  // Material de referencia e seu custo POR UNIDADE BASE (configuravel).
+  materialName             String?
+  materialCostPerBaseCents Int      @default(0)
+  laborCostPerBaseCents    Int      @default(0) // mao de obra por unidade base
+  paintCostPerBaseCents    Int      @default(0) // pintura por unidade base
+  weightPerBaseKg          Float    @default(0) // peso estimado por unidade base
+  marginBps                Int      @default(2000) // margem sugerida
+  active                   Boolean  @default(true)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("steel_products")
 }

@@ -11,6 +11,7 @@ import {
   Wallet,
   FileText,
   Layers,
+  Hammer,
   Settings,
   LogOut,
   Menu,
@@ -30,6 +31,7 @@ const ICONS: Record<string, LucideIcon> = {
   Wallet,
   FileText,
   Layers,
+  Hammer,
   Settings,
 };
 

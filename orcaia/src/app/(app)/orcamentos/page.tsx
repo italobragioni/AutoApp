@@ -19,13 +19,13 @@ const STATUS_LABELS: Record<string, string> = {
 export default async function OrcamentosPage() {
   const ctx = await requireContext();
 
-  if (ctx.company.niche !== "vidracaria") {
+  if (ctx.company.niche !== "vidracaria" && ctx.company.niche !== "serralheria") {
     return (
       <>
         <PageHeader title="Orçamentos" />
         <EmptyState
-          title="Módulo exclusivo de vidraçarias"
-          description="A composição de orçamentos por peça de vidro aparece apenas para o nicho Vidraçaria."
+          title="Módulo de orçamentos"
+          description="A composição de orçamentos está disponível para os nichos Vidraçaria e Serralheria."
         />
       </>
     );

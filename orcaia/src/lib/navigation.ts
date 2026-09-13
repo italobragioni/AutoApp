@@ -16,14 +16,18 @@ const MATERIAIS: NavItem = { href: "/materiais", label: "Materiais", icon: "Boxe
 const CUSTOS: NavItem = { href: "/custos", label: "Custos", icon: "Wallet" };
 const ORCAMENTOS: NavItem = { href: "/orcamentos", label: "Orcamentos", icon: "FileText" };
 const VIDROS: NavItem = { href: "/vidros", label: "Vidros", icon: "Layers" };
+const SERRALHERIA: NavItem = { href: "/serralheria", label: "Materiais e produtos", icon: "Hammer" };
 const CONFIG: NavItem = { href: "/configuracoes", label: "Configuracoes", icon: "Settings" };
 
-// Menu generico (serralheria, marcenaria) — inalterado.
+// Menu generico (marcenaria e demais) — inalterado.
 const GENERIC_NAV: NavItem[] = [DASHBOARD, CLIENTES, PRODUTOS, MATERIAIS, CUSTOS, CONFIG];
 
-// Menu da vidracaria — com o modulo especifico.
+// Menus dos nichos com modulo proprio.
 const VIDRACARIA_NAV: NavItem[] = [DASHBOARD, CLIENTES, ORCAMENTOS, VIDROS, CONFIG];
+const SERRALHERIA_NAV: NavItem[] = [DASHBOARD, CLIENTES, ORCAMENTOS, SERRALHERIA, CONFIG];
 
 export function navForNiche(niche: string): NavItem[] {
-  return niche === "vidracaria" ? VIDRACARIA_NAV : GENERIC_NAV;
+  if (niche === "vidracaria") return VIDRACARIA_NAV;
+  if (niche === "serralheria") return SERRALHERIA_NAV;
+  return GENERIC_NAV;
 }
