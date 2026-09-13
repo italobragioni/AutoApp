@@ -7,6 +7,7 @@ import { formatCents } from "@/lib/core/format";
 import { Card, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
+import { DemoDataButton } from "@/components/DemoDataButton";
 
 const QUOTE_NICHES = ["vidracaria", "serralheria", "marcenaria"];
 
@@ -47,6 +48,19 @@ export default async function DashboardPage() {
         title={`Ola, ${ctx.user.name.split(" ")[0]}`}
         description={`${ctx.company.name} · ${niche?.label ?? ctx.company.niche}`}
       />
+
+      {hasQuotes && clientes === 0 ? (
+        <Card className="mb-6 flex flex-wrap items-center justify-between gap-4 border-brand/30 bg-brand-muted">
+          <div>
+            <p className="text-base font-semibold text-ink">Quer testar com dados de exemplo?</p>
+            <p className="text-sm text-ink-soft">
+              Preenchemos seu catálogo, clientes e alguns orçamentos de demonstração para você
+              explorar o sistema. Você pode apagar tudo depois.
+            </p>
+          </div>
+          <DemoDataButton />
+        </Card>
+      ) : null}
 
       {hasQuotes ? (
         <>
