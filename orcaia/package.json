@@ -1,6 +1,6 @@
 {
   "name": "orcaia",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "ORCAIA - Plataforma de geracao de orcamentos para prestadores de servico (vidracarias, serralherias e marcenarias)",
   "scripts": {
