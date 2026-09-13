@@ -7,8 +7,8 @@ import { authorizeNiche, fail, OK, parseOrFail, type FormState } from "@/lib/cor
 import { steelQuoteHeaderSchema, steelQuoteItemSchema } from "@/lib/validation/serralheria";
 import { computeSteelItem, computeSteelQuoteTotals } from "@/lib/niches/serralheria/pricing";
 import { serviceTypeLabel } from "@/lib/niches/serralheria/options";
+import { isQuoteStatus } from "@/lib/quotes/status";
 
-const STATUSES = ["rascunho", "enviado", "aprovado", "recusado", "expirado", "cancelado"];
 const authorize = () => authorizeNiche("serralheria");
 
 function readHeader(formData: FormData) {
@@ -19,6 +19,7 @@ function readHeader(formData: FormData) {
     installationCents: formData.get("installationCents") ?? "",
     travelCents: formData.get("travelCents") ?? "",
     otherCents: formData.get("otherCents") ?? "",
+    discountCents: formData.get("discountCents") ?? "",
     deliveryTime: formData.get("deliveryTime") ?? "",
     paymentTerms: formData.get("paymentTerms") ?? "",
     notes: formData.get("notes") ?? "",
@@ -59,7 +60,7 @@ async function recomputeTotals(companyId: string, quoteId: string): Promise<void
 
   await prisma.quote.update({
     where: { id: quote.id },
-    data: { subtotalCents: totals.materialsCents, totalCents: totals.totalCents },
+    data: { subtotalCents: totals.materialsCents, totalCents: Math.max(0, totals.totalCents - quote.discountCents) },
   });
 }
 
@@ -94,6 +95,7 @@ export async function createSteelQuote(_p: FormState, formData: FormData): Promi
         installationCents: parsed.data.installationCents,
         travelCents: parsed.data.travelCents,
         otherCents: parsed.data.otherCents,
+        discountCents: parsed.data.discountCents,
         deliveryTime: parsed.data.deliveryTime ?? null,
         paymentTerms: parsed.data.paymentTerms ?? null,
         notes: parsed.data.notes ?? null,
@@ -133,6 +135,7 @@ export async function updateSteelQuoteHeader(_p: FormState, formData: FormData):
         installationCents: parsed.data.installationCents,
         travelCents: parsed.data.travelCents,
         otherCents: parsed.data.otherCents,
+        discountCents: parsed.data.discountCents,
         deliveryTime: parsed.data.deliveryTime ?? null,
         paymentTerms: parsed.data.paymentTerms ?? null,
         notes: parsed.data.notes ?? null,
@@ -261,7 +264,7 @@ export async function setSteelQuoteStatus(formData: FormData): Promise<void> {
   if (!ctx) return;
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "");
-  if (!id || !STATUSES.includes(status)) return;
+  if (!id || !isQuoteStatus(status)) return;
   const r = await prisma.quote.updateMany({
     where: { id, companyId: ctx.company.id },
     data: { status },

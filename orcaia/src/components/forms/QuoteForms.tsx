@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Printer } from "lucide-react";
 import type { FormState } from "@/lib/core/actions";
+import { QUOTE_STATUS_OPTIONS } from "@/lib/quotes/status";
 import { Button } from "@/components/ui/button";
 import {
   SubmitButton,
@@ -29,6 +30,9 @@ type HeaderValues = {
   installationValue: string;
   travelValue: string;
   otherValue: string;
+  discountValue: string;
+  deliveryTime?: string | null;
+  paymentTerms?: string | null;
   notes?: string | null;
 };
 
@@ -74,6 +78,12 @@ export function QuoteHeaderForm({
         <TextField label="Instalação / mão de obra (R$)" name="installationCents" inputMode="decimal" placeholder="0,00" defaultValue={initial.installationValue} error={err.installationCents} />
         <TextField label="Deslocamento (R$)" name="travelCents" inputMode="decimal" placeholder="0,00" defaultValue={initial.travelValue} error={err.travelCents} />
         <TextField label="Outros custos (R$)" name="otherCents" inputMode="decimal" placeholder="0,00" defaultValue={initial.otherValue} error={err.otherCents} />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <TextField label="Desconto (R$)" name="discountCents" inputMode="decimal" placeholder="0,00" defaultValue={initial.discountValue} error={err.discountCents} />
+        <TextField label="Prazo estimado" name="deliveryTime" placeholder="Ex.: 10 dias" defaultValue={initial.deliveryTime ?? ""} error={err.deliveryTime} />
+        <TextField label="Condições de pagamento" name="paymentTerms" placeholder="Ex.: 50% + 50%" defaultValue={initial.paymentTerms ?? ""} error={err.paymentTerms} />
       </div>
 
       <TextAreaField label="Observações" name="notes" rows={2} defaultValue={initial.notes ?? ""} error={err.notes} />
@@ -182,19 +192,13 @@ export function StatusControl({
   action,
   id,
   status,
+  options = QUOTE_STATUS_OPTIONS,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   id: string;
   status: string;
+  options?: [string, string][];
 }) {
-  const options = [
-    ["rascunho", "Rascunho"],
-    ["enviado", "Enviado"],
-    ["aprovado", "Aprovado"],
-    ["recusado", "Recusado"],
-    ["expirado", "Expirado"],
-    ["cancelado", "Cancelado"],
-  ];
   return (
     <form action={action} className="flex items-center gap-2">
       <input type="hidden" name="id" value={id} />

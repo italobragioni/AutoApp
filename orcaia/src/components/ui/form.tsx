@@ -9,11 +9,12 @@ import { Label, Input, Select } from "./field";
 export function SubmitButton({
   children,
   className,
+  disabled,
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending} className={className} {...props}>
+    <Button type="submit" disabled={pending || disabled} className={className} {...props}>
       {pending ? "Salvando..." : children}
     </Button>
   );

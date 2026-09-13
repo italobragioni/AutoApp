@@ -25,6 +25,7 @@ type HeaderValues = {
   installationValue: string;
   travelValue: string;
   otherValue: string;
+  discountValue: string;
   deliveryTime?: string | null;
   paymentTerms?: string | null;
   notes?: string | null;
@@ -72,6 +73,8 @@ export function SteelQuoteHeaderForm({
         <TextField label="Deslocamento (R$)" name="travelCents" inputMode="decimal" placeholder="0,00" defaultValue={initial.travelValue} error={err.travelCents} />
         <TextField label="Outros custos (R$)" name="otherCents" inputMode="decimal" placeholder="0,00" defaultValue={initial.otherValue} error={err.otherCents} />
       </div>
+
+      <TextField label="Desconto (R$)" name="discountCents" inputMode="decimal" placeholder="0,00" defaultValue={initial.discountValue} error={err.discountCents} />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <TextField label="Prazo estimado" name="deliveryTime" placeholder="Ex.: 15 dias úteis" defaultValue={initial.deliveryTime ?? ""} error={err.deliveryTime} />

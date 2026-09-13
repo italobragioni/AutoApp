@@ -33,6 +33,7 @@ export type SteelQuoteDocData = {
   installationCents: number;
   travelCents: number;
   otherCents: number;
+  discountCents: number;
   marginBps: number;
   totalCents: number;
   notes: string | null;
@@ -46,6 +47,7 @@ export type SteelQuoteDocData = {
 const STATUS_LABELS: Record<string, string> = {
   rascunho: "Rascunho",
   enviado: "Enviado",
+  em_negociacao: "Em negociação",
   aprovado: "Aprovado",
   recusado: "Recusado",
   expirado: "Expirado",
@@ -75,7 +77,7 @@ export function SteelQuoteDocument({ quote }: { quote: SteelQuoteDocData }) {
 
   const costsBase =
     quote.subtotalCents + quote.installationCents + quote.travelCents + quote.otherCents;
-  const marginCents = quote.totalCents - costsBase;
+  const marginCents = Math.round((costsBase * quote.marginBps) / 10000);
 
   return (
     <div className="rounded-xl border border-surface-border bg-white p-6 text-ink print:border-0 print:p-0">
@@ -177,6 +179,9 @@ export function SteelQuoteDocument({ quote }: { quote: SteelQuoteDocData }) {
             <Row label="Subtotal" value={formatCents(costsBase)} strong />
           </div>
           <Row label={`Margem (${formatBps(quote.marginBps)})`} value={formatCents(marginCents)} />
+          {quote.discountCents > 0 ? (
+            <Row label="Desconto" value={`- ${formatCents(quote.discountCents)}`} />
+          ) : null}
           <div className="border-t-2 border-ink/20 pt-1">
             <Row label="Valor final" value={formatCents(quote.totalCents)} strong big />
           </div>

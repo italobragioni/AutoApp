@@ -38,6 +38,7 @@ export const steelQuoteHeaderSchema = z.object({
   installationCents: moneyCentsOptional,
   travelCents: moneyCentsOptional,
   otherCents: moneyCentsOptional,
+  discountCents: moneyCentsOptional,
   deliveryTime: optionalText,
   paymentTerms: optionalText,
   notes: optionalText,

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Printer, Trash2 } from "lucide-react";
+import { Printer, Trash2, Copy } from "lucide-react";
 import { prisma } from "@/lib/core/db";
 import { formatCents } from "@/lib/core/format";
 import { bpsToInput, centsToInput } from "@/lib/core/money";
@@ -16,6 +16,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusControl } from "@/components/forms/QuoteForms";
+import { duplicateQuote } from "@/app/actions/quote-common";
 import { SteelQuoteHeaderForm, SteelAddItemForm } from "@/components/forms/SteelQuoteForms";
 import { SteelQuoteDocument } from "@/components/quote/SteelQuoteDocument";
 
@@ -57,6 +58,10 @@ export async function SteelQuoteBuilder({ id, companyId }: { id: string; company
                 <Printer className="h-4 w-4" /> Imprimir / PDF
               </Button>
             </Link>
+            <form action={duplicateQuote}>
+              <input type="hidden" name="id" value={quote.id} />
+              <Button variant="secondary" type="submit"><Copy className="h-4 w-4" /> Duplicar</Button>
+            </form>
             <form action={deleteSteelQuote}>
               <input type="hidden" name="id" value={quote.id} />
               <Button variant="ghost" type="submit" className="text-red-600 hover:bg-red-50">
@@ -106,6 +111,7 @@ export async function SteelQuoteBuilder({ id, companyId }: { id: string; company
                 installationValue: centsToInput(quote.installationCents),
                 travelValue: centsToInput(quote.travelCents),
                 otherValue: centsToInput(quote.otherCents),
+                discountValue: centsToInput(quote.discountCents),
                 deliveryTime: quote.deliveryTime,
                 paymentTerms: quote.paymentTerms,
                 notes: quote.notes,
@@ -155,6 +161,7 @@ export async function SteelQuoteBuilder({ id, companyId }: { id: string; company
             otherCents: quote.otherCents,
             marginBps: quote.marginBps,
             totalCents: quote.totalCents,
+            discountCents: quote.discountCents,
             notes: quote.notes,
             deliveryTime: quote.deliveryTime,
             paymentTerms: quote.paymentTerms,

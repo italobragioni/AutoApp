@@ -29,9 +29,12 @@ export type QuoteDocData = {
   installationCents: number;
   travelCents: number;
   otherCents: number;
+  discountCents: number;
   marginBps: number;
   totalCents: number;
   notes: string | null;
+  deliveryTime: string | null;
+  paymentTerms: string | null;
   customer: {
     name: string;
     document: string | null;
@@ -59,6 +62,7 @@ export type QuoteDocData = {
 const STATUS_LABELS: Record<string, string> = {
   rascunho: "Rascunho",
   enviado: "Enviado",
+  em_negociacao: "Em negociação",
   aprovado: "Aprovado",
   recusado: "Recusado",
   expirado: "Expirado",
@@ -68,7 +72,7 @@ const STATUS_LABELS: Record<string, string> = {
 export function QuoteDocument({ quote }: { quote: QuoteDocData }) {
   const costsBase =
     quote.subtotalCents + quote.installationCents + quote.travelCents + quote.otherCents;
-  const marginCents = quote.totalCents - costsBase;
+  const marginCents = Math.round((costsBase * quote.marginBps) / 10000);
 
   return (
     <div className="rounded-xl border border-surface-border bg-white p-6 text-ink print:border-0 print:p-0">
@@ -171,7 +175,11 @@ export function QuoteDocument({ quote }: { quote: QuoteDocData }) {
       </div>
 
       {/* Totais */}
-      <div className="mt-4 flex justify-end">
+      <div className="mt-4 flex flex-wrap justify-between gap-4">
+        <div className="text-xs text-ink-soft">
+          {quote.deliveryTime ? <p><span className="font-semibold text-ink">Prazo estimado:</span> {quote.deliveryTime}</p> : null}
+          {quote.paymentTerms ? <p><span className="font-semibold text-ink">Condições de pagamento:</span> {quote.paymentTerms}</p> : null}
+        </div>
         <div className="w-full max-w-xs space-y-1 text-sm">
           <Row label="Materiais" value={formatCents(quote.subtotalCents)} />
           <Row label="Mão de obra" value={formatCents(quote.installationCents)} />
@@ -181,6 +189,9 @@ export function QuoteDocument({ quote }: { quote: QuoteDocData }) {
             <Row label="Subtotal" value={formatCents(costsBase)} strong />
           </div>
           <Row label={`Margem (${formatBps(quote.marginBps)})`} value={formatCents(marginCents)} />
+          {quote.discountCents > 0 ? (
+            <Row label="Desconto" value={`- ${formatCents(quote.discountCents)}`} />
+          ) : null}
           <div className="border-t-2 border-ink/20 pt-1">
             <Row label="Preço final" value={formatCents(quote.totalCents)} strong big />
           </div>

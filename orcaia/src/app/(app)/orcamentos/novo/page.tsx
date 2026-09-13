@@ -72,6 +72,7 @@ export default async function NovoOrcamentoPage() {
             installationValue: "",
             travelValue: "",
             otherValue: "",
+            discountValue: "",
           }}
         />
       </Card>

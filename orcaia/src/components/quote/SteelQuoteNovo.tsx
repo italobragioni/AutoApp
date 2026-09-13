@@ -42,6 +42,7 @@ export async function SteelQuoteNovo({ companyId }: { companyId: string }) {
             installationValue: "",
             travelValue: "",
             otherValue: "",
+            discountValue: "",
           }}
         />
       </Card>

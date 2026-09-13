@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Zap } from "lucide-react";
 import { requireContext } from "@/lib/core/tenant";
 import { prisma } from "@/lib/core/db";
 import { formatCents, formatDate } from "@/lib/core/format";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 const STATUS_LABELS: Record<string, string> = {
   rascunho: "Rascunho",
   enviado: "Enviado",
+  em_negociacao: "Em negociação",
   aprovado: "Aprovado",
   recusado: "Recusado",
   expirado: "Expirado",
@@ -43,13 +44,20 @@ export default async function OrcamentosPage() {
     <>
       <PageHeader
         title="Orçamentos"
-        description="Funil de propostas com composição por peça de vidro."
+        description="Funil de propostas. Use o gerador rápido para criar em segundos."
         action={
-          <Link href="/orcamentos/novo">
-            <Button>
-              <Plus className="h-4 w-4" /> Novo orçamento
-            </Button>
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/orcamentos/rapido">
+              <Button>
+                <Zap className="h-4 w-4" /> Gerar rápido
+              </Button>
+            </Link>
+            <Link href="/orcamentos/novo">
+              <Button variant="secondary">
+                <Plus className="h-4 w-4" /> Novo (detalhado)
+              </Button>
+            </Link>
+          </div>
         }
       />
 

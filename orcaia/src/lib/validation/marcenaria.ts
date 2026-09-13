@@ -52,6 +52,7 @@ export const woodQuoteHeaderSchema = z.object({
   installationCents: moneyCentsOptional,
   travelCents: moneyCentsOptional,
   otherCents: moneyCentsOptional,
+  discountCents: moneyCentsOptional,
   deliveryTime: optionalText,
   paymentTerms: optionalText,
   notes: optionalText,

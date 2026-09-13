@@ -39,6 +39,7 @@ export async function WoodQuoteNovo({ companyId }: { companyId: string }) {
             installationValue: "",
             travelValue: "",
             otherValue: "",
+            discountValue: "",
           }}
         />
       </Card>

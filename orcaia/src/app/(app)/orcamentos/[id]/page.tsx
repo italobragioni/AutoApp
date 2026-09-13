@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Printer, Trash2 } from "lucide-react";
+import { Printer, Trash2, Copy } from "lucide-react";
 import { requireContext } from "@/lib/core/tenant";
 import { prisma } from "@/lib/core/db";
 import { formatCents } from "@/lib/core/format";
 import { bpsToInput, centsToInput } from "@/lib/core/money";
 import { updateQuoteHeader, deleteQuote, addQuoteItem, deleteQuoteItem, setQuoteStatus } from "@/app/actions/quotes";
+import { duplicateQuote } from "@/app/actions/quote-common";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/field";
 import { Card, CardTitle } from "@/components/ui/card";
@@ -87,6 +88,12 @@ export default async function OrcamentoDetalhePage({
                 <Printer className="h-4 w-4" /> Imprimir / PDF
               </Button>
             </Link>
+            <form action={duplicateQuote}>
+              <input type="hidden" name="id" value={quote.id} />
+              <Button variant="secondary" type="submit">
+                <Copy className="h-4 w-4" /> Duplicar
+              </Button>
+            </form>
             <form action={deleteQuote}>
               <input type="hidden" name="id" value={quote.id} />
               <Button variant="ghost" type="submit" className="text-red-600 hover:bg-red-50">
@@ -144,6 +151,9 @@ export default async function OrcamentoDetalhePage({
                 installationValue: centsToInput(quote.installationCents),
                 travelValue: centsToInput(quote.travelCents),
                 otherValue: centsToInput(quote.otherCents),
+                discountValue: centsToInput(quote.discountCents),
+                deliveryTime: quote.deliveryTime,
+                paymentTerms: quote.paymentTerms,
                 notes: quote.notes,
               }}
             />
@@ -195,6 +205,9 @@ export default async function OrcamentoDetalhePage({
             otherCents: quote.otherCents,
             marginBps: quote.marginBps,
             totalCents: quote.totalCents,
+            discountCents: quote.discountCents,
+            deliveryTime: quote.deliveryTime,
+            paymentTerms: quote.paymentTerms,
             notes: quote.notes,
             customer: quote.customer,
             company,

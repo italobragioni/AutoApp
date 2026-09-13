@@ -39,6 +39,9 @@ export const quoteHeaderSchema = z.object({
   installationCents: moneyCentsOptional,
   travelCents: moneyCentsOptional,
   otherCents: moneyCentsOptional,
+  discountCents: moneyCentsOptional,
+  deliveryTime: optionalText,
+  paymentTerms: optionalText,
   notes: optionalText,
 });
 export type QuoteHeaderInput = z.infer<typeof quoteHeaderSchema>;
