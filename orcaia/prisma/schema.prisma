@@ -71,9 +71,9 @@ model AuthToken {
 }
 
 model Company {
-  id       String @id @default(cuid())
+  id       String  @id @default(cuid())
   name     String
-  slug     String @unique
+  slug     String  @unique
   // Nicho da empresa. Define presets, campos e unidades (ver src/lib/niches/).
   niche    String // vidracaria | serralheria | marcenaria
   document String? // CNPJ
@@ -85,8 +85,8 @@ model Company {
   logoUrl  String?
 
   // Politicas de preco padrao da empresa (usadas como default nos orcamentos).
-  defaultMarginBps    Int @default(2000) // 2000 = 20% de margem
-  defaultLaborRateCents Int @default(0)  // valor/hora padrao de mao de obra
+  defaultMarginBps      Int @default(2000) // 2000 = 20% de margem
+  defaultLaborRateCents Int @default(0) // valor/hora padrao de mao de obra
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -100,6 +100,11 @@ model Company {
   priceTables     PriceTable[]
   additionalCosts AdditionalCost[]
   quotes          Quote[]
+
+  // Catalogo especifico do nicho Vidracaria (ver src/lib/niches/vidracaria).
+  glassOptions    GlassOption[]
+  finishOptions   FinishOption[]
+  hardwareOptions HardwareOption[]
 
   // Previstos para etapas futuras (nao criados nesta etapa):
   //   subscription  Subscription?   -> cobranca / controle de acesso por plano
@@ -197,18 +202,18 @@ model Material {
 // (ex.: espessura do vidro, tipo de perfil) vao em `spec` (JSON), mantendo o
 // nucleo generico.
 model Product {
-  id            String   @id @default(cuid())
-  companyId     String
-  name          String
-  description   String?
-  category      String?
-  niche         String // vidracaria | serralheria | marcenaria
-  unit          String // unidade de venda: m2 | ml | un | modulo | hora
-  basePriceCents Int?    // preco base opcional (quando nao calculado por composicao)
-  spec          Json?    // atributos especificos do nicho
-  active        Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id             String   @id @default(cuid())
+  companyId      String
+  name           String
+  description    String?
+  category       String?
+  niche          String // vidracaria | serralheria | marcenaria
+  unit           String // unidade de venda: m2 | ml | un | modulo | hora
+  basePriceCents Int? // preco base opcional (quando nao calculado por composicao)
+  spec           Json? // atributos especificos do nicho
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   company          Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
   productMaterials ProductMaterial[]
@@ -288,15 +293,15 @@ model PriceTableItem {
 // Custo adicional reutilizavel (frete, deslocamento, taxa de projeto...).
 // `kind` decide qual campo vale: fixo -> amountCents; percentual -> percentBps.
 model AdditionalCost {
-  id         String   @id @default(cuid())
-  companyId  String
-  name       String
-  kind       String   @default("fixo") // fixo | percentual
-  amountCents Int?    // usado quando kind = fixo
-  percentBps Int?     // usado quando kind = percentual (2000 = 20%)
-  active     Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  kind        String   @default("fixo") // fixo | percentual
+  amountCents Int? // usado quando kind = fixo
+  percentBps  Int? // usado quando kind = percentual (2000 = 20%)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
@@ -318,9 +323,13 @@ model Quote {
   validUntil   DateTime?
 
   // Totais consolidados (em centavos). Recalculados pelo motor de precificacao.
-  subtotalCents        Int @default(0)
+  subtotalCents        Int @default(0) // soma dos materiais dos itens
   discountCents        Int @default(0)
   additionalCostsCents Int @default(0)
+  // Custos gerais do orcamento (informados pelo usuario, em centavos).
+  installationCents    Int @default(0) // mao de obra / instalacao
+  travelCents          Int @default(0) // deslocamento
+  otherCents           Int @default(0) // outros custos
   // Margem aplicada ao orcamento (pontos-base). Default vem da empresa.
   marginBps            Int @default(2000)
   totalCents           Int @default(0)
@@ -329,9 +338,9 @@ model Quote {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  company      Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  customer     Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  priceTable   PriceTable?       @relation(fields: [priceTableId], references: [id], onDelete: SetNull)
+  company      Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer     Customer           @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  priceTable   PriceTable?        @relation(fields: [priceTableId], references: [id], onDelete: SetNull)
   items        QuoteItem[]
   statusEvents QuoteStatusEvent[]
 
@@ -341,7 +350,7 @@ model Quote {
 }
 
 model QuoteItem {
-  id             String @id @default(cuid())
+  id             String  @id @default(cuid())
   quoteId        String
   productId      String?
   description    String
@@ -375,4 +384,65 @@ model QuoteStatusEvent {
 
   @@index([quoteId, createdAt])
   @@map("quote_status_events")
+}
+
+// ---------------------------------------------------------------------------
+// Nicho: Vidracaria
+// ---------------------------------------------------------------------------
+//
+// Catalogo de precos especifico de vidracarias. Nenhum preco e fixo no codigo:
+// tudo e cadastrado e ajustavel pela empresa. Estes modelos so sao usados por
+// empresas com niche = "vidracaria"; os outros nichos nao os enxergam.
+
+// Preco do vidro por combinacao tipo + espessura, em R$/m2.
+// Ex.: "Temperado" + 8mm = R$ X/m2.
+model GlassOption {
+  id              String   @id @default(cuid())
+  companyId       String
+  glassType       String // temperado | laminado | comum | espelho | outros (ou custom)
+  thicknessMm     Int // 4 | 6 | 8 | 10 | 12 (ou custom)
+  pricePerM2Cents Int      @default(0)
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, glassType, thicknessMm])
+  @@index([companyId])
+  @@map("glass_options")
+}
+
+// Acabamento (polido, lapidado, bisote, ...). Preco por m2, por metro linear
+// (perimetro) ou fixo por peca.
+model FinishOption {
+  id         String   @id @default(cuid())
+  companyId  String
+  name       String
+  unit       String   @default("ml") // m2 | ml | fixo
+  priceCents Int      @default(0)
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("finish_options")
+}
+
+// Ferragem (dobradica, puxador, perfil, ...). Preco por unidade.
+model HardwareOption {
+  id         String   @id @default(cuid())
+  companyId  String
+  name       String
+  priceCents Int      @default(0)
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("hardware_options")
 }

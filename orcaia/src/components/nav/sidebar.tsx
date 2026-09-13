@@ -9,13 +9,15 @@ import {
   Package,
   Boxes,
   Wallet,
+  FileText,
+  Layers,
   Settings,
   LogOut,
   Menu,
   X,
   type LucideIcon,
 } from "lucide-react";
-import { NAV_ITEMS } from "@/lib/navigation";
+import type { NavItem } from "@/lib/navigation";
 import { logoutAction } from "@/app/actions/auth";
 import { switchCompanyAction } from "@/app/actions/company";
 import { cn } from "@/lib/core/cn";
@@ -26,6 +28,8 @@ const ICONS: Record<string, LucideIcon> = {
   Package,
   Boxes,
   Wallet,
+  FileText,
+  Layers,
   Settings,
 };
 
@@ -34,6 +38,7 @@ type Props = {
   nicheLabel: string;
   memberships: { companyId: string; companyName: string }[];
   activeCompanyId: string;
+  items: NavItem[];
 };
 
 export function Sidebar(props: Props) {
@@ -42,7 +47,7 @@ export function Sidebar(props: Props) {
   return (
     <>
       {/* Barra superior (mobile) */}
-      <div className="flex items-center justify-between border-b border-surface-border bg-white px-4 py-3 md:hidden">
+      <div className="flex items-center justify-between border-b border-surface-border bg-white px-4 py-3 md:hidden print:hidden">
         <span className="text-lg font-bold text-brand">ORCAIA</span>
         <button
           onClick={() => setOpen(true)}
@@ -64,7 +69,7 @@ export function Sidebar(props: Props) {
       {/* Sidebar: fixa no desktop, drawer no mobile */}
       <aside
         className={cn(
-          "flex w-60 flex-col border-r border-surface-border bg-white",
+          "flex w-60 flex-col border-r border-surface-border bg-white print:hidden",
           "fixed inset-y-0 left-0 z-40 transition-transform md:static md:z-auto md:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full",
         )}
@@ -91,6 +96,7 @@ function NavBody({
   nicheLabel,
   memberships,
   activeCompanyId,
+  items,
   onNavigate,
 }: Props & { onNavigate: () => void }) {
   const pathname = usePathname();
@@ -122,7 +128,7 @@ function NavBody({
       </div>
 
       <nav className="mt-4 flex-1 space-y-1 overflow-y-auto px-3">
-        {NAV_ITEMS.map((item) => {
+        {items.map((item) => {
           const Icon = ICONS[item.icon];
           const active =
             pathname === item.href || pathname.startsWith(`${item.href}/`);

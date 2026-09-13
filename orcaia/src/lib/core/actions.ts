@@ -36,6 +36,22 @@ export async function authorize(minRole?: Role): Promise<TenantContext> {
 export class ActionError extends Error {}
 
 /**
+ * Autoriza e exige que a empresa ativa seja de um nicho especifico. Usado pelos
+ * modulos por-nicho (ex.: vidracaria) para que outros nichos nunca criem nem
+ * enxerguem esses dados.
+ */
+export async function authorizeNiche(
+  niche: string,
+): Promise<{ ctx: TenantContext | null; state: FormState }> {
+  const { ctx, state } = await authorizeState();
+  if (!ctx) return { ctx: null, state };
+  if (ctx.company.niche !== niche) {
+    return { ctx: null, state: fail("Modulo indisponivel para este nicho.") };
+  }
+  return { ctx, state: OK };
+}
+
+/**
  * Versao de `authorize` que nunca lanca: retorna o contexto ou um FormState de
  * erro pronto para as Server Actions de formulario. Uso:
  *   const { ctx, state } = await authorizeState();
