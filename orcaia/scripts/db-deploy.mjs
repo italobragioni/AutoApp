@@ -1,10 +1,16 @@
 // Aplica as migrations no build de forma robusta.
 //
-// As migrations (prisma migrate deploy) devem usar a conexao DIRETA do banco,
-// nao a "pooled" (pgbouncer), que pode falhar. Nomes de variavel variam
-// conforme a integracao (Neon/Vercel usa DATABASE_URL_UNPOOLED; outras usam
-// POSTGRES_URL_NON_POOLING). Este script escolhe a melhor disponivel e cai para
-// DATABASE_URL quando nao ha uma direta especifica.
+// As migrations (prisma migrate deploy) PRECISAM usar a conexao DIRETA do banco,
+// nao a "pooled" (pgbouncer). Na conexao pooled o Prisma nao consegue segurar o
+// "advisory lock" usado para migrar e o build falha com P1002 (timeout ao
+// adquirir o lock). Este script:
+//   1. escolhe uma URL direta explicita se existir (DATABASE_URL_UNPOOLED /
+//      POSTGRES_URL_NON_POOLING);
+//   2. senao, deriva a URL direta a partir da DATABASE_URL (remove "-pooler" do
+//      host do Neon e o parametro pgbouncer);
+//   3. garante um connect_timeout generoso (Neon "hiberna" e leva alguns
+//      segundos para acordar na primeira conexao);
+//   4. tenta novamente algumas vezes em caso de timeout / cold start.
 //
 // O app em runtime continua usando DATABASE_URL (definido no schema).
 
@@ -31,21 +37,77 @@ if (existsSync(".env")) {
   }
 }
 
-const migrateUrl =
-  process.env.DATABASE_URL_UNPOOLED ||
-  process.env.POSTGRES_URL_NON_POOLING ||
-  process.env.DATABASE_URL;
+/**
+ * Transforma uma URL "pooled" numa URL DIRETA, adequada para migrations:
+ *  - remove o sufixo "-pooler" do host (padrao Neon);
+ *  - remove o parametro pgbouncer;
+ *  - garante sslmode=require e um connect_timeout generoso.
+ */
+function toDirectUrl(raw) {
+  try {
+    const u = new URL(raw);
+    u.hostname = u.hostname.replace(/-pooler\./, ".");
+    u.searchParams.delete("pgbouncer");
+    if (!u.searchParams.has("sslmode")) u.searchParams.set("sslmode", "require");
+    if (!u.searchParams.has("connect_timeout")) u.searchParams.set("connect_timeout", "30");
+    return u.toString();
+  } catch {
+    return raw;
+  }
+}
 
-if (!migrateUrl) {
+const explicitDirect =
+  process.env.DATABASE_URL_UNPOOLED || process.env.POSTGRES_URL_NON_POOLING;
+
+const base = explicitDirect || process.env.DATABASE_URL;
+
+if (!base) {
   console.error(
     "[db-deploy] Nenhuma variavel de conexao encontrada. Defina DATABASE_URL.",
   );
   process.exit(1);
 }
 
-console.log("[db-deploy] Aplicando migrations (prisma migrate deploy)...");
-execSync("prisma migrate deploy", {
-  stdio: "inherit",
-  env: { ...process.env, DATABASE_URL: migrateUrl },
-});
-console.log("[db-deploy] Migrations aplicadas com sucesso.");
+const migrateUrl = toDirectUrl(base);
+
+try {
+  const host = new URL(migrateUrl).host;
+  const pooled = /-pooler\./.test(host);
+  console.log(
+    `[db-deploy] Conexao de migracao: ${host}${pooled ? " (ATENCAO: ainda parece pooled)" : " (direta)"}`,
+  );
+} catch {
+  /* ignore */
+}
+
+const MAX_ATTEMPTS = 4;
+let lastError = null;
+
+for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+  try {
+    console.log(
+      `[db-deploy] Aplicando migrations (tentativa ${attempt}/${MAX_ATTEMPTS})...`,
+    );
+    execSync("prisma migrate deploy", {
+      stdio: "inherit",
+      env: { ...process.env, DATABASE_URL: migrateUrl },
+    });
+    console.log("[db-deploy] Migrations aplicadas com sucesso.");
+    process.exit(0);
+  } catch (err) {
+    lastError = err;
+    console.warn(
+      `[db-deploy] Falha na tentativa ${attempt}. Aguardando o banco acordar...`,
+    );
+    if (attempt < MAX_ATTEMPTS) {
+      // Espera crescente: 3s, 6s, 9s — cobre o cold start do Neon.
+      execSync(`node -e "setTimeout(()=>{}, ${attempt * 3000})"`);
+    }
+  }
+}
+
+console.error(
+  "[db-deploy] Nao foi possivel aplicar as migrations apos varias tentativas.",
+);
+if (lastError) console.error(String(lastError.message || lastError));
+process.exit(1);
