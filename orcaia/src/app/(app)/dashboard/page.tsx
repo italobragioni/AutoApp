@@ -94,6 +94,7 @@ export default async function DashboardPage() {
             <Link href="/clientes">
               <Button variant="secondary"><Users className="h-4 w-4" /> Clientes ({clientes})</Button>
             </Link>
+            <DemoDataButton variant="secondary" label="Dados de demonstração" />
           </div>
         </>
       ) : (

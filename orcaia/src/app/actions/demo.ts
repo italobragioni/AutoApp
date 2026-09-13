@@ -23,7 +23,6 @@ type BuiltItem = {
 
 async function makeQuote(
   companyId: string,
-  number: number,
   customerId: string,
   status: string,
   marginBps: number,
@@ -35,6 +34,8 @@ async function makeQuote(
   const costsBase = materials + install;
   const marginCents = Math.round((costsBase * marginBps) / 10000);
   const totalCents = costsBase + marginCents;
+  const maxNumber = await prisma.quote.aggregate({ where: { companyId }, _max: { number: true } });
+  const number = (maxNumber._max.number ?? 0) + 1;
   await prisma.quote.create({
     data: {
       companyId,
@@ -67,8 +68,12 @@ export async function loadDemoData(): Promise<void> {
   if (!ctx) return;
   const companyId = ctx.company.id;
 
-  const already = await prisma.customer.count({ where: { companyId } });
-  if (already > 0) {
+  // Nao duplica: se os dados de demonstracao ja foram carregados antes, sai.
+  const demoExists = await prisma.customer.findFirst({
+    where: { companyId, name: "João Silva" },
+    select: { id: true },
+  });
+  if (demoExists) {
     revalidatePath("/dashboard");
     return;
   }
@@ -93,19 +98,19 @@ export async function loadDemoData(): Promise<void> {
     const espelho = computeGlassItem({ widthMm: 800, heightMm: 1200, quantity: 1, glassPricePerM2Cents: g4.pricePerM2Cents, finish: { unit: "ml", priceCents: lap.priceCents }, hardware: [] });
     const guarda = computeGlassItem({ widthMm: 1500, heightMm: 2200, quantity: 1, glassPricePerM2Cents: g10.pricePerM2Cents, finish: null, hardware: [] });
 
-    await makeQuote(companyId, 1, c1.id, "aprovado", 2000, {
+    await makeQuote(companyId, c1.id, "aprovado", 2000, {
       description: "Box de correr Temperado 8mm", unit: "un", quantity: 1,
       spec: { widthMm: 1000, heightMm: 2000, glass: { glassType: "Temperado", thicknessMm: 8, pricePerM2Cents: g8.pricePerM2Cents }, finish: { name: "Lapidado" }, hardware: [{ name: "Dobradiça", quantity: 2 }] },
       breakdown: { areaM2Total: box.areaM2Total, glassCents: box.glassCents, finishCents: box.finishCents, hardwareCents: box.hardwareCents, materialsCents: box.materialsCents },
     }, { installationCents: 8000, deliveryTime: "5 dias úteis", paymentTerms: "50% + 50%" });
 
-    await makeQuote(companyId, 2, c2.id, "enviado", 2500, {
+    await makeQuote(companyId, c2.id, "enviado", 2500, {
       description: "Espelho lapidado 0,80 x 1,20", unit: "un", quantity: 1,
       spec: { widthMm: 800, heightMm: 1200, glass: { glassType: "Comum", thicknessMm: 4, pricePerM2Cents: g4.pricePerM2Cents }, finish: { name: "Lapidado" }, hardware: [] },
       breakdown: { areaM2Total: espelho.areaM2Total, glassCents: espelho.glassCents, finishCents: espelho.finishCents, hardwareCents: espelho.hardwareCents, materialsCents: espelho.materialsCents },
     });
 
-    await makeQuote(companyId, 3, c3.id, "em_negociacao", 2200, {
+    await makeQuote(companyId, c3.id, "em_negociacao", 2200, {
       description: "Guarda-corpo Temperado 10mm", unit: "un", quantity: 1,
       spec: { widthMm: 1500, heightMm: 2200, glass: { glassType: "Temperado", thicknessMm: 10, pricePerM2Cents: g10.pricePerM2Cents }, finish: null, hardware: [] },
       breakdown: { areaM2Total: guarda.areaM2Total, glassCents: guarda.glassCents, finishCents: guarda.finishCents, hardwareCents: guarda.hardwareCents, materialsCents: guarda.materialsCents },
@@ -123,9 +128,9 @@ export async function loadDemoData(): Promise<void> {
     const specSteel = (p: { id: string; name: string; serviceType: string; baseUnit: string; materialName: string | null }, dims: Record<string, number>) => ({ productId: p.id, productName: p.name, serviceType: p.serviceType, serviceTypeLabel: serviceTypeLabel(p.serviceType), baseUnit: p.baseUnit, materialName: p.materialName, ...dims });
     const bdSteel = (b: ReturnType<typeof computeSteelItem>) => ({ baseUnit: b.baseUnit, baseQtyTotal: b.baseQtyTotal, weightKgTotal: b.weightKgTotal, materialCents: b.materialCents, laborCents: b.laborCents, paintCents: b.paintCents, materialsCents: b.materialsCents });
 
-    await makeQuote(companyId, 1, c3.id, "aprovado", 3000, { description: "Portão basculante 3,00 x 2,20", unit: "m2", quantity: 1, spec: specSteel(portao, { widthMm: 3000, heightMm: 2200 }), breakdown: bdSteel(b1) }, { installationCents: 25000, deliveryTime: "20 dias úteis", paymentTerms: "Entrada + entrega" });
-    await makeQuote(companyId, 2, c1.id, "enviado", 3000, { description: "Grades de proteção (2 un)", unit: "m2", quantity: 2, spec: specSteel(grade, { widthMm: 2000, heightMm: 1500 }), breakdown: bdSteel(b2) });
-    await makeQuote(companyId, 3, c2.id, "em_negociacao", 3000, { description: "Corrimão 6 m", unit: "ml", quantity: 1, spec: specSteel(corrimao, { lengthMm: 6000 }), breakdown: bdSteel(b3) });
+    await makeQuote(companyId, c3.id, "aprovado", 3000, { description: "Portão basculante 3,00 x 2,20", unit: "m2", quantity: 1, spec: specSteel(portao, { widthMm: 3000, heightMm: 2200 }), breakdown: bdSteel(b1) }, { installationCents: 25000, deliveryTime: "20 dias úteis", paymentTerms: "Entrada + entrega" });
+    await makeQuote(companyId, c1.id, "enviado", 3000, { description: "Grades de proteção (2 un)", unit: "m2", quantity: 2, spec: specSteel(grade, { widthMm: 2000, heightMm: 1500 }), breakdown: bdSteel(b2) });
+    await makeQuote(companyId, c2.id, "em_negociacao", 3000, { description: "Corrimão 6 m", unit: "ml", quantity: 1, spec: specSteel(corrimao, { lengthMm: 6000 }), breakdown: bdSteel(b3) });
   } else if (ctx.company.niche === "marcenaria") {
     const mdf = await prisma.woodMaterial.create({ data: { companyId, name: "MDF", thicknessMm: 18, pricePerM2Cents: 15000 } });
     const mdp = await prisma.woodMaterial.create({ data: { companyId, name: "MDP", thicknessMm: 15, pricePerM2Cents: 11000 } });
@@ -147,9 +152,9 @@ export async function loadDemoData(): Promise<void> {
 
     const bdWood = (b: ReturnType<typeof computeWoodItem>) => ({ areaM2Total: b.areaM2Total, materialCents: b.materialCents, finishCents: b.finishCents, laborCents: b.laborCents, assemblyCents: b.assemblyCents, hardwareCents: b.hardwareCents, materialsCents: b.materialsCents });
 
-    await makeQuote(companyId, 1, c1.id, "aprovado", 3000, { description: "Guarda-roupa casal", unit: "un", quantity: 1, spec: { templateName: tGuarda.name, areaMode: "frontal", widthMm: 2000, heightMm: 2500, depthMm: 550, materialName: "MDF 18mm", finishName: "Melamínico", hardware: [{ name: "Dobradiças", quantity: 6 }] }, breakdown: bdWood(b1) }, { installationCents: 20000, deliveryTime: "30 dias", paymentTerms: "40% entrada, saldo na entrega" });
-    await makeQuote(companyId, 2, c2.id, "enviado", 3000, { description: "Painel de TV ripado", unit: "un", quantity: 1, spec: { templateName: tPainel.name, areaMode: "frontal", widthMm: 1800, heightMm: 1200, depthMm: 40, materialName: "MDP 15mm", finishName: "BP", hardware: [] }, breakdown: bdWood(b2) });
-    await makeQuote(companyId, 3, c3.id, "em_negociacao", 3000, { description: "Gabinete de cozinha", unit: "un", quantity: 1, spec: { templateName: tCozinha.name, areaMode: "caixa", widthMm: 1200, heightMm: 800, depthMm: 550, materialName: "MDF 18mm", finishName: "Melamínico", hardware: [{ name: "Dobradiças", quantity: 4 }, { name: "Corrediças", quantity: 2 }] }, breakdown: bdWood(b3) }, { installationCents: 12000 });
+    await makeQuote(companyId, c1.id, "aprovado", 3000, { description: "Guarda-roupa casal", unit: "un", quantity: 1, spec: { templateName: tGuarda.name, areaMode: "frontal", widthMm: 2000, heightMm: 2500, depthMm: 550, materialName: "MDF 18mm", finishName: "Melamínico", hardware: [{ name: "Dobradiças", quantity: 6 }] }, breakdown: bdWood(b1) }, { installationCents: 20000, deliveryTime: "30 dias", paymentTerms: "40% entrada, saldo na entrega" });
+    await makeQuote(companyId, c2.id, "enviado", 3000, { description: "Painel de TV ripado", unit: "un", quantity: 1, spec: { templateName: tPainel.name, areaMode: "frontal", widthMm: 1800, heightMm: 1200, depthMm: 40, materialName: "MDP 15mm", finishName: "BP", hardware: [] }, breakdown: bdWood(b2) });
+    await makeQuote(companyId, c3.id, "em_negociacao", 3000, { description: "Gabinete de cozinha", unit: "un", quantity: 1, spec: { templateName: tCozinha.name, areaMode: "caixa", widthMm: 1200, heightMm: 800, depthMm: 550, materialName: "MDF 18mm", finishName: "Melamínico", hardware: [{ name: "Dobradiças", quantity: 4 }, { name: "Corrediças", quantity: 2 }] }, breakdown: bdWood(b3) }, { installationCents: 12000 });
   }
 
   revalidatePath("/dashboard");
