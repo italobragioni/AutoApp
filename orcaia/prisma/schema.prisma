@@ -110,6 +110,12 @@ model Company {
   steelMaterials SteelMaterial[]
   steelProducts  SteelProduct[]
 
+  // Catalogo especifico do nicho Marcenaria (ver src/lib/niches/marcenaria).
+  woodMaterials WoodMaterial[]
+  woodFinishes  WoodFinish[]
+  woodHardware  WoodHardware[]
+  woodTemplates WoodTemplate[]
+
   // Previstos para etapas futuras (nao criados nesta etapa):
   //   subscription  Subscription?   -> cobranca / controle de acesso por plano
   //   apiTokens     ApiToken[]      -> autenticacao da extensao Chrome (API v1)
@@ -504,4 +510,91 @@ model SteelProduct {
 
   @@index([companyId])
   @@map("steel_products")
+}
+
+// ---------------------------------------------------------------------------
+// Nicho: Marcenaria
+// ---------------------------------------------------------------------------
+//
+// Precos 100% configuraveis pela empresa. Modelos (WoodTemplate) aceleram a
+// criacao de orcamentos. So usados por empresas com niche = "marcenaria".
+
+// Material (MDF, MDP, Compensado, Madeira macica...) por espessura, preco/m2.
+model WoodMaterial {
+  id              String   @id @default(cuid())
+  companyId       String
+  name            String
+  thicknessMm     Int
+  pricePerM2Cents Int      @default(0)
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, name, thicknessMm])
+  @@index([companyId])
+  @@map("wood_materials")
+}
+
+// Acabamento (Cru, BP, Melaminico, Laca, Pintura...). Preco por m2.
+model WoodFinish {
+  id              String   @id @default(cuid())
+  companyId       String
+  name            String
+  pricePerM2Cents Int      @default(0)
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("wood_finishes")
+}
+
+// Ferragem (dobradicas, corredicas, puxadores...). Preco por unidade.
+model WoodHardware {
+  id         String   @id @default(cuid())
+  companyId  String
+  name       String
+  priceCents Int      @default(0)
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("wood_hardware")
+}
+
+// Modelo de produto (Armario planejado, Painel de TV, Guarda-roupa...). Acelera
+// a criacao do orcamento pre-definindo material, acabamento, mao de obra,
+// montagem, margem e ferragens. O usuario cria os seus.
+model WoodTemplate {
+  id                 String   @id @default(cuid())
+  companyId          String
+  name               String
+  category           String?
+  // Como a area de material e estimada: frontal (L x A) ou caixa (superficie).
+  areaMode           String   @default("caixa")
+  materialId         String? // referencia a WoodMaterial (resolvida no orcamento)
+  finishId           String? // referencia a WoodFinish
+  laborPerM2Cents    Int      @default(0) // mao de obra por m2
+  assemblyPerM2Cents Int      @default(0) // montagem por m2
+  marginBps          Int      @default(2000)
+  defaultWidthMm     Int?
+  defaultHeightMm    Int?
+  defaultDepthMm     Int?
+  // Ferragens padrao: [{ hardwareId, quantity }]. Precos resolvidos no orcamento.
+  hardware           Json?
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("wood_templates")
 }

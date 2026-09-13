@@ -12,6 +12,7 @@ import {
   FileText,
   Layers,
   Hammer,
+  Blocks,
   Settings,
   LogOut,
   Menu,
@@ -32,6 +33,7 @@ const ICONS: Record<string, LucideIcon> = {
   FileText,
   Layers,
   Hammer,
+  Blocks,
   Settings,
 };
 

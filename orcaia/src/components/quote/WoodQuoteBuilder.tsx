@@ -1,79 +1,48 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Printer, Trash2 } from "lucide-react";
-import { requireContext } from "@/lib/core/tenant";
 import { prisma } from "@/lib/core/db";
 import { formatCents } from "@/lib/core/format";
 import { bpsToInput, centsToInput } from "@/lib/core/money";
-import { updateQuoteHeader, deleteQuote, addQuoteItem, deleteQuoteItem, setQuoteStatus } from "@/app/actions/quotes";
+import {
+  updateWoodQuoteHeader,
+  addWoodQuoteItem,
+  deleteWoodQuoteItem,
+  deleteWoodQuote,
+  setWoodQuoteStatus,
+} from "@/app/actions/wood-quotes";
 import { PageHeader } from "@/components/ui/page-header";
-import { EmptyState } from "@/components/ui/field";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { DeleteButton } from "@/components/ui/delete-button";
-import { QuoteHeaderForm, AddItemForm, StatusControl } from "@/components/forms/QuoteForms";
-import { QuoteDocument } from "@/components/quote/QuoteDocument";
-import { SteelQuoteBuilder } from "@/components/quote/SteelQuoteBuilder";
-import { WoodQuoteBuilder } from "@/components/quote/WoodQuoteBuilder";
+import { StatusControl } from "@/components/forms/QuoteForms";
+import { WoodQuoteHeaderForm, WoodAddItemForm } from "@/components/forms/WoodQuoteForms";
+import { WoodQuoteDocument } from "@/components/quote/WoodQuoteDocument";
 
 function toDateInput(d: Date | null): string {
   return d ? d.toISOString().slice(0, 10) : "";
 }
 
-export default async function OrcamentoDetalhePage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const ctx = await requireContext();
-  const { id } = await params;
-
-  if (ctx.company.niche === "serralheria") {
-    return <SteelQuoteBuilder id={id} companyId={ctx.company.id} />;
-  }
-  if (ctx.company.niche === "marcenaria") {
-    return <WoodQuoteBuilder id={id} companyId={ctx.company.id} />;
-  }
-
-  if (ctx.company.niche !== "vidracaria") {
-    return (
-      <>
-        <PageHeader title="Orçamento" />
-        <EmptyState title="Módulo exclusivo de vidraçarias" />
-      </>
-    );
-  }
-
-  const [quote, company, customers, glass, finishes, hardware] = await Promise.all([
+export async function WoodQuoteBuilder({ id, companyId }: { id: string; companyId: string }) {
+  const [quote, company, customers, templates, materials, finishes] = await Promise.all([
     prisma.quote.findFirst({
-      where: { id, companyId: ctx.company.id },
-      include: {
-        customer: true,
-        items: { orderBy: { id: "asc" } },
-      },
+      where: { id, companyId },
+      include: { customer: true, items: { orderBy: { id: "asc" } } },
     }),
     prisma.company.findUnique({
-      where: { id: ctx.company.id },
+      where: { id: companyId },
       select: { name: true, document: true, phone: true, email: true, city: true, state: true },
     }),
-    prisma.customer.findMany({
-      where: { companyId: ctx.company.id },
-      orderBy: { name: "asc" },
-      select: { id: true, name: true },
-    }),
-    prisma.glassOption.findMany({ where: { companyId: ctx.company.id, active: true }, orderBy: [{ glassType: "asc" }, { thicknessMm: "asc" }] }),
-    prisma.finishOption.findMany({ where: { companyId: ctx.company.id, active: true }, orderBy: { name: "asc" } }),
-    prisma.hardwareOption.findMany({ where: { companyId: ctx.company.id, active: true }, orderBy: { name: "asc" } }),
+    prisma.customer.findMany({ where: { companyId }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    prisma.woodTemplate.findMany({ where: { companyId, active: true }, orderBy: { name: "asc" } }),
+    prisma.woodMaterial.findMany({ where: { companyId, active: true }, orderBy: [{ name: "asc" }, { thicknessMm: "asc" }] }),
+    prisma.woodFinish.findMany({ where: { companyId, active: true }, orderBy: { name: "asc" } }),
   ]);
 
   if (!quote || !company) notFound();
 
-  const glassOptions = glass.map((g) => ({
-    id: g.id,
-    label: `${g.glassType} ${g.thicknessMm}mm — ${formatCents(g.pricePerM2Cents)}/m²`,
-  }));
-  const finishOptions = finishes.map((f) => ({ id: f.id, label: `${f.name} (${formatCents(f.priceCents)})` }));
-  const hardwareList = hardware.map((h) => ({ id: h.id, name: h.name, priceLabel: `${formatCents(h.priceCents)}/un` }));
+  const templateOptions = templates.map((t) => ({ id: t.id, label: t.category ? `${t.name} (${t.category})` : t.name }));
+  const materialOptions = materials.map((m) => ({ id: m.id, label: `${m.name} ${m.thicknessMm}mm — ${formatCents(m.pricePerM2Cents)}/m²` }));
+  const finishOptions = finishes.map((f) => ({ id: f.id, label: `${f.name} — ${formatCents(f.pricePerM2Cents)}/m²` }));
 
   return (
     <>
@@ -83,11 +52,9 @@ export default async function OrcamentoDetalhePage({
         action={
           <div className="flex flex-wrap items-center gap-2">
             <Link href={`/orcamentos/${quote.id}/imprimir`}>
-              <Button variant="secondary">
-                <Printer className="h-4 w-4" /> Imprimir / PDF
-              </Button>
+              <Button variant="secondary"><Printer className="h-4 w-4" /> Imprimir / PDF</Button>
             </Link>
-            <form action={deleteQuote}>
+            <form action={deleteWoodQuote}>
               <input type="hidden" name="id" value={quote.id} />
               <Button variant="ghost" type="submit" className="text-red-600 hover:bg-red-50">
                 <Trash2 className="h-4 w-4" /> Excluir
@@ -98,41 +65,35 @@ export default async function OrcamentoDetalhePage({
       />
 
       <div className="mb-4">
-        <StatusControl action={setQuoteStatus} id={quote.id} status={quote.status} />
+        <StatusControl action={setWoodQuoteStatus} id={quote.id} status={quote.status} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Adicionar item */}
         <Card>
           <CardTitle>Adicionar item</CardTitle>
           <div className="mt-3">
-            {glassOptions.length === 0 ? (
+            {templateOptions.length === 0 ? (
               <div>
-                <p className="mb-3 text-sm text-ink-faint">
-                  Cadastre ao menos um vidro (tipo + espessura + preço/m²) antes de adicionar itens.
-                </p>
-                <Link href="/vidros">
-                  <Button variant="secondary">Ir para Vidros</Button>
-                </Link>
+                <p className="mb-3 text-sm text-ink-faint">Crie ao menos um modelo de produto antes de adicionar itens.</p>
+                <Link href="/marcenaria"><Button variant="secondary">Ir para Marcenaria</Button></Link>
               </div>
             ) : (
-              <AddItemForm
-                action={addQuoteItem}
+              <WoodAddItemForm
+                action={addWoodQuoteItem}
                 quoteId={quote.id}
-                glassOptions={glassOptions}
-                finishOptions={finishOptions}
-                hardware={hardwareList}
+                templates={templateOptions}
+                materials={materialOptions}
+                finishes={finishOptions}
               />
             )}
           </div>
         </Card>
 
-        {/* Dados e custos gerais */}
         <Card>
           <CardTitle>Dados e custos gerais</CardTitle>
           <div className="mt-3">
-            <QuoteHeaderForm
-              action={updateQuoteHeader}
+            <WoodQuoteHeaderForm
+              action={updateWoodQuoteHeader}
               customers={customers}
               isEdit
               submitLabel="Salvar dados"
@@ -144,6 +105,8 @@ export default async function OrcamentoDetalhePage({
                 installationValue: centsToInput(quote.installationCents),
                 travelValue: centsToInput(quote.travelCents),
                 otherValue: centsToInput(quote.otherCents),
+                deliveryTime: quote.deliveryTime,
+                paymentTerms: quote.paymentTerms,
                 notes: quote.notes,
               }}
             />
@@ -151,7 +114,6 @@ export default async function OrcamentoDetalhePage({
         </Card>
       </div>
 
-      {/* Itens (gerenciar) */}
       {quote.items.length > 0 ? (
         <Card className="mt-6">
           <CardTitle>Itens do orçamento ({quote.items.length})</CardTitle>
@@ -162,11 +124,9 @@ export default async function OrcamentoDetalhePage({
                 <li key={it.id} className="flex items-center justify-between gap-3 py-2 text-sm">
                   <span className="text-ink">
                     {it.description}
-                    <span className="ml-2 text-ink-faint">
-                      {it.quantity}x · {formatCents(b.materialsCents ?? 0)}
-                    </span>
+                    <span className="ml-2 text-ink-faint">{it.quantity}x · {formatCents(b.materialsCents ?? 0)}</span>
                   </span>
-                  <form action={deleteQuoteItem}>
+                  <form action={deleteWoodQuoteItem}>
                     <input type="hidden" name="id" value={it.id} />
                     <input type="hidden" name="quoteId" value={quote.id} />
                     <button type="submit" className="rounded-lg p-2 text-ink-faint hover:bg-red-50 hover:text-red-600" aria-label="Remover item">
@@ -180,10 +140,9 @@ export default async function OrcamentoDetalhePage({
         </Card>
       ) : null}
 
-      {/* Visualizacao profissional */}
       <div className="mt-6">
         <h2 className="mb-2 text-sm font-semibold text-ink-soft">Pré-visualização do orçamento</h2>
-        <QuoteDocument
+        <WoodQuoteDocument
           quote={{
             number: quote.number,
             status: quote.status,
@@ -196,15 +155,11 @@ export default async function OrcamentoDetalhePage({
             marginBps: quote.marginBps,
             totalCents: quote.totalCents,
             notes: quote.notes,
+            deliveryTime: quote.deliveryTime,
+            paymentTerms: quote.paymentTerms,
             customer: quote.customer,
             company,
-            items: quote.items.map((it) => ({
-              id: it.id,
-              description: it.description,
-              quantity: it.quantity,
-              spec: it.spec,
-              breakdown: it.breakdown,
-            })),
+            items: quote.items.map((it) => ({ id: it.id, description: it.description, quantity: it.quantity, spec: it.spec, breakdown: it.breakdown })),
           }}
         />
       </div>
